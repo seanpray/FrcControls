@@ -5,7 +5,6 @@ mod simple_detector {
     use apriltag::{DetectorBuilder, Family, TagParams};
     use mat2image::ToImage;
     use opencv::core::Mat;
-    use opencv::core::VecN;
     use opencv::prelude::MatTraitConstManual;
     use opencv::prelude::VideoCaptureTrait;
     use opencv::prelude::VideoCaptureTraitConst;
@@ -73,10 +72,10 @@ mod simple_detector {
 
     pub fn _main() -> Result<()> {
         let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
-        let res = (1280.0, 720.0);
+
         highgui::named_window("seancv", 1)?;
-        cam.set(3, res.0)?;
-        cam.set(4, res.1)?;
+        cam.set(3, 640.0)?;
+        cam.set(4, 480.0)?;
         let _ = videoio::VideoCapture::is_opened(&cam)?;
         let family: Family = Family::tag_16h5();
         // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
@@ -120,18 +119,15 @@ mod simple_detector {
                 println!("  - detection {}: {:#?}", index, det);
                 println!("DISTANCE {:#?}", det.hamming());
                 println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
-                let pose = det.estimate_tag_pose(&TagParams {
-                    tagsize: 1.00,
-                    fx: 2.1,
-                    fy: 2.2,
-                    cx: 4.0,
-                    cy: 5.0,
-                });
-                println!("  - pose {}: {:#?}", index, pose);
-                if let Some(pose) = pose {
-                    println!("translation {:?}", pose.translation());
-                    println!("rotation {:?}", pose.rotation());
-                }
+                println!("{:?}", tag_params);
+                    let pose = det.estimate_tag_pose(&TagParams {
+                        tagsize: 1.00,
+                        fx: 2.1,
+                        fy: 2.2,
+                        cx: 4.0,
+                        cy: 5.0,
+                    });
+                    println!("  - pose {}: {:#?}", index, pose);
                 let corners = det.corners();
                 let center = det.center();
                 let (w, h) = (
@@ -150,56 +146,6 @@ mod simple_detector {
                     Scalar::new(255f64, 0f64, 0f64, 25f64), // color value
                     1,                                      // border width of drawn rectangle
                     8,
-                    0,
-                )
-                .unwrap();
-                imgproc::line(
-                    &mut frame,
-                    opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
-                    opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
-                    Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-                    4,
-                    2,
-                    0,
-                )
-                .unwrap();
-                imgproc::line(
-                    &mut frame,
-                    opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
-                    opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
-                    Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-                    4,
-                    2,
-                    0,
-                )
-                .unwrap();
-                imgproc::line(
-                    &mut frame,
-                    opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
-                    opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
-                    Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-                    4,
-                    2,
-                    0,
-                )
-                .unwrap();
-                imgproc::line(
-                    &mut frame,
-                    opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
-                    opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
-                    Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-                    4,
-                    2,
-                    0,
-                )
-                .unwrap();
-                imgproc::circle(
-                    &mut frame,
-                    opencv::core::Point_::new(center[0] as i32, center[1] as i32),
-                    5,
-                    Scalar::new(255f64, 255f64, 0f64, 0f64),
-                    2,
-                    2,
                     0,
                 )
                 .unwrap();
