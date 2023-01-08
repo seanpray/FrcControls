@@ -9,5 +9,5 @@ edition = "2021"
 apriltag = { path = "../apriltag-rust/", features = ["image"] }
 anyhow = "1.0.68"
 image = "0.24"
-mat2image = "0.2.0"
+mat2image = { version = "0.2.0", features = ["rayon"] }
 opencv = { version = "0.74.0", features = ["rgb"] }
