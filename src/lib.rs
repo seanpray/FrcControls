@@ -9,72 +9,12 @@ use opencv::prelude::VideoCaptureTraitConst;
 use opencv::{core::Scalar, highgui, imgproc, videoio};
 use std::{thread, time::Duration, time::Instant};
 
-// #[derive(Debug, Clone)]
-// struct TagParamsArg {
-//     pub tagsize: f64,
-//     pub fx: f64,
-//     pub fy: f64,
-//     pub cx: f64,
-//     pub cy: f64,
-// }
-//
-// impl From<TagParamsArg> for TagParams {
-//     fn from(arg: TagParamsArg) -> Self {
-//         let TagParamsArg {
-//             tagsize,
-//             fx,
-//             fy,
-//             cx,
-//             cy,
-//         } = arg;
-//
-//         Self {
-//             tagsize,
-//             fx,
-//             fy,
-//             cx,
-//             cy,
-//         }
-//     }
-// }
-
-// impl FromStr for TagParamsArg {
-//     type Err = Error;
-//
-//     fn from_str(text: &str) -> Result<Self, Self::Err> {
-//         let tokens: Vec<_> = text.split(',').collect();
-//         ensure!(
-//             tokens.len() == 5,
-//             r#"tag parameters must be in format "tagsize,fx,fy,cx,cy""#
-//         );
-//
-//         let values = tokens
-//             .into_iter()
-//             .map(|token| -> Result<_> {
-//                 let value: f64 = token.parse().unwrap();
-//                 Ok(value)
-//             })
-//             .collect::<Result<Vec<_>>>()
-//             .with_context(|| format!("failed to parse tag parameters {}", text))?;
-//
-//         Ok(Self {
-//             tagsize: values[0],
-//             fx: values[1],
-//             fy: values[2],
-//             cx: values[3],
-//             cy: values[4],
-//         })
-//     }
-// }
-//
-
 fn fabs(x: f64) -> f64 {
     // On wasm32 we know that LLVM's intrinsic will compile to an optimized
     // `f64.abs` native instruction, so we can leverage this for both code size
     // and speed.
     f64::from_bits(x.to_bits() & (u64::MAX / 2))
 }
-
 
 const ATANHI: [f64; 4] = [
     4.63647609000806093515e-01, /* atan(0.5)hi 0x3FDDAC67, 0x0561BB4F */
@@ -132,7 +72,6 @@ macro_rules! i {
         unsafe { *$array.get_unchecked_mut($index) == $rhs }
     };
 }
-
 
 fn atan(x: f64) -> f64 {
     let mut x = x;
@@ -516,26 +455,46 @@ struct Rotation {
     pub pitch: f64,
 }
 
+impl ToString for Rotation {
+    fn to_string(&self) -> String {
+        format!(
+            "heading: {}\nroll: {}\npitch: {}",
+            self.heading, self.roll, self.pitch
+        )
+    }
+}
+
+#[allow(unused_assignments)]
 fn matrix_to_heading(m: MatdRef) -> Rotation {
+    let mut psi = 0.0;
+    let mut theta = 0.0;
+    let mut phi = 0.0;
     let rc = m.nrows();
     let lc = m.ncols();
     let d = m.data();
     assert!(rc == 3 && lc == 3);
     // https://community.esri.com/t5/net-maps-sdk-questions/how-do-i-convert-from-a-rotation-matrix-to-heading/td-p/729775
-    if !(d[0][2] == 1.0 || d[0][2] == - 1.0) {
-        return Rotation {
-            heading: (atan2(d[0][1], m[2][2]) * 180 / PI),
-            roll: (atan2(d[1][2], d[2][2]) * 180 / PI),
-            pitch: (asin(d[0][2])) as f32,
-        }
+    if !(d[2] == 1.0 || d[2] == -1.0) {
+        phi = atan2(d[1], d[0]);
+        psi = atan2(d[rc + 2], d[2 * rc + 2]);
+        theta = asin(d[2]);
+    } else if d[2] == -1.0 {
+        theta = PI / 2.0;
+        psi = phi + atan2(d[rc], d[rc * 2]);
+    } else {
+        theta = -PI / 2.0;
+        psi = -phi + atan2(-d[rc], -d[rc * 2]);
     }
-    unimplemented!();
+    Rotation {
+        heading: theta * 180.0 / PI,
+        roll: phi * 180.0 / PI,
+        pitch: psi * 180.0 / PI,
+    }
 }
 
-pub fn detect_loop() -> Result<()> {
-    let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
+pub fn detect_loop(cam_index: i32) -> Result<()> {
+    let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
     let res = (800.0, 440.0);
-    highgui::named_window("seancv", 1)?;
     cam.set(3, res.0)?;
     cam.set(4, res.1)?;
     let _ = videoio::VideoCapture::is_opened(&cam)?;
@@ -557,7 +516,7 @@ pub fn detect_loop() -> Result<()> {
             if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
                 cam = v;
             }
-            let _ = highgui::named_window("seancv", 1);
+            // let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, res.0);
             let _ = cam.set(4, res.1);
             let _ = videoio::VideoCapture::is_opened(&cam);
@@ -584,7 +543,7 @@ pub fn detect_loop() -> Result<()> {
             if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
                 cam = v;
             }
-            let _ = highgui::named_window("seancv", 1);
+            // let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, res.0);
             let _ = cam.set(4, res.1);
             let _ = videoio::VideoCapture::is_opened(&cam);
@@ -601,10 +560,9 @@ pub fn detect_loop() -> Result<()> {
             first = false;
         }
         for det in detections {
-            if det.decision_margin() < 50.0 {
+            if det.decision_margin() < 40.0 {
                 continue;
             }
-            println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
             let pose = det.estimate_tag_pose(&TagParams {
                 tagsize: 0.152,
                 fx: 578.272,
@@ -616,6 +574,7 @@ pub fn detect_loop() -> Result<()> {
             if let Some(pose) = pose {
                 println!("id {:?}", det.id());
                 println!("translation {:?}", pose.translation());
+                println!("{}", matrix_to_heading(pose.rotation()).to_string());
                 let t = pose.translation().data();
                 let x = t[0];
                 let y = t[1];
@@ -672,13 +631,15 @@ pub fn detect_loop() -> Result<()> {
                 2,
                 0,
             );
-        };
+        }
         println!("capture {:?}", (calc_time - frame_time).as_millis());
         println!("calc {:?}", calc_time.elapsed().as_millis());
         println!("total {:?}", frame_time.elapsed().as_millis());
-        highgui::imshow("seancv", &frame)?;
-        if highgui::wait_key(1)? > 0 {
-            continue;
-        }
+        println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
+        // *(DISPLAY_CACHE.lock()).push(frame.clone());
+        // highgui::imshow(&format!("seancv{cam_index}"), &frame)?;
+        // if highgui::wait_key(1)? > 0 {
+        //     continue;
+        // }
     }
 }
