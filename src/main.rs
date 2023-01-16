@@ -14,11 +14,16 @@ struct ScreenData {
     screen: i32,
 }
 
-lazy_static::lazy_static! {
-    pub (crate) static ref DISPLAY_CACHE: Arc<Mutex<Vec<ScreenData>>> = Arc::new(Mutex::new(vec![]));
-}
+// lazy_static::lazy_static! {
+//     pub (crate) static ref DISPLAY_CACHE: Arc<Mutex<Vec<ScreenData>>> = Arc::new(Mutex::new(vec![]));
+// }
 
 fn main() -> Result<()> {
+    // let _ = detect_loop(0);
+    let i = 0;
+        let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
+        let _ = detect_loop(i);
+    loop {}
     for i in 0..4 {
         let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
         thread::spawn(move || {
@@ -26,10 +31,10 @@ fn main() -> Result<()> {
         });
     }
     loop {
-        let d = DISPLAY_CACHE.lock().unwrap();
-        if let Some(v) = d {
-            highgui::imshow(&format!("seancv{}", m.screen), &v.m).unwrap();
-        }
+        // let d = DISPLAY_CACHE.lock().unwrap();
+        // if let Some(v) = d {
+        //     highgui::imshow(&format!("seancv{}", m.screen), &v.m).unwrap();
+        // }
 
     }
     Ok(())
