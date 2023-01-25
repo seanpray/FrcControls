@@ -10,6 +10,8 @@ use opencv::{core::Scalar, highgui, imgproc, videoio};
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
 use std::{thread, time::Duration, time::Instant};
+use crate::Field;
+use crate::{INSTRUCTION_UPDATE, RUNTIME_CACHE, OP, FIELD_DATA_NAME};
 
 #[inline(always)]
 fn fabs(x: f64) -> f64 {
@@ -46,6 +48,11 @@ const AT: [f64; 11] = [
     -3.653_157_274_421_691_6e-2, /* 0xBFA2B444, 0x2C6A6C2F */
     1.628_582_011_536_578_2e-2,  /* 0x3F90AD3A, 0xE322DA11 */
 ];
+
+#[inline(always)]
+pub fn calc_proportion(w: f64, h: f64) -> f64 {
+    (1.0 / 8.0 * w * w) / h + 0.5 * h
+}
 
 macro_rules! i {
     ($array:expr, $index:expr) => {
@@ -490,11 +497,166 @@ fn matrix_to_heading(m: MatdRef) -> Rotation {
     }
 }
 
+// take x and z position then apply a counter clockwise linear transformation to adjust the offset
+#[inline(always)]
+fn linear_transform(theta: f64, x: f64, z: f64) -> (f64, f64) {
+    (x * theta.cos() - x * theta.sin(), x * theta.sin() + x * theta.cos())
+}
+
+// transform based on camera id
+// compute robot position from static tag position
+#[inline(always)]
+fn compute_offset(cam_id: u8, id: u8, x: f64, y: f64, z: f64) -> Option<(f64, f64, f64)> {
+    match cam_id {
+        0 => {
+        },
+        1 => {
+
+        },
+        2 => {
+
+        },
+        _ => {}
+    }
+    None
+}
+
+// TODO: stick inside event loop, look up stuff from network table to add/remove instructions on
+// different thread
+fn compute_instruction() {
+    if INSTRUCTION_UPDATE.load(std::sync::atomic::Ordering::Relaxed) {
+        INSTRUCTION_UPDATE.swap(false, std::sync::atomic::Ordering::Relaxed);
+        match RUNTIME_CACHE.lock().unwrap().pop() {
+            OP::ReloadField => {
+                let _ = FIELD_DATA = Field::reload_field(FIELD_DATA_NAME);
+                // maybe log on failure?
+            },
+            _ => {}
+        }
+    }
+}
+
+static RES: (f64, f64) = (800.0, 440.0);
+
+pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
+    let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
+    cam.set(3, RES.0)?;
+    cam.set(4, RES.1)?;
+    let _ = videoio::VideoCapture::is_opened(&cam)?;
+    // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
+    thread::spawn(move || {
+        let family: Family = Family::tag_16h5();
+        let mut detector = DetectorBuilder::new()
+            .add_family_bits(family, 1)
+            .build()
+            .unwrap();
+        let mut start = Instant::now();
+        let mut frame_num = 0;
+        let mut first = true;
+        let mut avg_frame_time = 0;
+        loop {
+            let frame_time = Instant::now();
+            let mut frame = Mat::default();
+            if cam.read(&mut frame).is_err() {
+                thread::sleep(Duration::from_millis(50));
+                if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                    cam = v;
+                }
+                let _ = cam.set(3, RES.0);
+                let _ = cam.set(4, RES.1);
+                let _ = videoio::VideoCapture::is_opened(&cam);
+                continue;
+            }
+            // if one frame took a long time we can ignore
+            if frame_num % 10 == 0 {
+                start = Instant::now();
+                frame_num = 0;
+            }
+            frame_num += 1;
+            let calc_time = Instant::now();
+            if frame.size().unwrap_or_default().width == 0 || frame.size().unwrap_or_default().height == 0 {
+                thread::sleep(Duration::from_millis(10));
+            }
+
+            // if input_files.is_empty() {
+            //     eprintln!("no input files");
+            //     return Ok(());
+            // }
+
+            let Ok(frame_img) = frame.to_image() else {
+                thread::sleep(Duration::from_millis(50));
+                if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                    cam = v;
+                }
+                let _ = cam.set(3, RES.0);
+                let _ = cam.set(4, RES.1);
+                let _ = videoio::VideoCapture::is_opened(&cam);
+                continue;
+            };
+            // let DynamicImage::ImageLuma8(frame) = frame else {
+            //     unreachable!();
+            // };
+            let detections = detector.detect(frame_img.to_luma8());
+            // let detections = detector.detect(frame.to_image().unwrap().as_flat_samples_u8().unwrap());
+
+            if first {
+                start = Instant::now();
+                first = false;
+            }
+            for det in detections {
+                if det.decision_margin() < 40.0 {
+                    continue;
+                }
+                let pose = det.estimate_tag_pose(&TagParams {
+                    tagsize: 0.152,
+                    fx: 578.272,
+                    fy: 578.272,
+                    cx: 402.145,
+                    cy: 221.506,
+                });
+                // println!("  - pose {}: {:#?}", index, pose);
+                if let Some(pose) = pose {
+                    println!("id {:?}", det.id());
+                    println!("translation {:?}", pose.translation());
+                    println!("{}", matrix_to_heading(pose.rotation()).to_string());
+                    let t = pose.translation().data();
+                    let x = t[0];
+                    let y = t[1];
+                    let z = t[2];
+                    println!(" x {}", x / 0.0254);
+                    println!(" y {}", y / 0.0254);
+                    println!(" z {}", z / 0.0254);
+                    // 39.3700787402 is 1 / 0.0254
+                    println!(" mag {}", (x * x + z * z).sqrt() * 39.3700787402);
+                }
+            }
+            println!("capture {:?}", (calc_time - frame_time).as_millis());
+            println!("calc {:?}", calc_time.elapsed().as_millis());
+            println!("total {:?}", frame_time.elapsed().as_millis());
+            println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
+            // *(DISPLAY_CACHE.lock()).push(frame.clone());
+        }
+    });
+    let mut worker_threads = Vec::with_capacity(threads);
+    for _ in 0..threads {
+        let t = thread::spawn(move || {
+            let family: Family = Family::tag_16h5();
+            let mut detector = DetectorBuilder::new()
+                .add_family_bits(family, 1)
+                .build()
+                .unwrap();
+            thread::park();
+            // stuff
+        });
+        worker_threads.push(t);
+    }
+    Ok(())
+}
+
 pub fn detect_loop(cam_index: i32) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
-    let res = (800.0, 440.0);
-    cam.set(3, res.0)?;
-    cam.set(4, res.1)?;
+    cam.set(3, RES.0)?;
+    cam.set(4, RES.1)?;
     let _ = videoio::VideoCapture::is_opened(&cam)?;
     let family: Family = Family::tag_16h5();
     // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
@@ -515,8 +677,8 @@ pub fn detect_loop(cam_index: i32) -> Result<()> {
                 cam = v;
             }
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
-            let _ = cam.set(3, res.0);
-            let _ = cam.set(4, res.1);
+            let _ = cam.set(3, RES.0);
+            let _ = cam.set(4, RES.1);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         }
@@ -542,8 +704,8 @@ pub fn detect_loop(cam_index: i32) -> Result<()> {
                 cam = v;
             }
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
-            let _ = cam.set(3, res.0);
-            let _ = cam.set(4, res.1);
+            let _ = cam.set(3, RES.0);
+            let _ = cam.set(4, RES.1);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         };

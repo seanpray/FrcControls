@@ -7,8 +7,10 @@ edition = "2021"
 
 [dependencies]
 apriltag = { path = "../apriltag-rust/", features = ["image"] }
-anyhow = "1.0.68"
-image = "0.24"
-mat2image = { version = "0.2.0", features = ["rayon"] }
-opencv = { version = "0.74.0", features = ["rgb"] }
+anyhow = "=1.0.42"
+image = "=0.24"
+mat2image = { version = "=0.2.0", features = ["rayon"] }
+opencv = { version = "=0.74.0", default-features = false, features = ["rgb", "video", "highgui", "imgproc", "videoio"] }
 lazy_static = "1.4.0"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.91"

@@ -148,28 +148,6 @@ fn row_reduce(pos: &mut M, vel: &mut M, direction: &M, velocity: bool, dir_name:
         pos.append(vel);
     }
     // grab dom element and display matrix if it actually exists
-    // if let Some(w) = web_sys::window() {
-    //     if let Some(val) = w.document() {
-    //         if let Some(val) = val.get_element_by_id(dir_name) {
-    //             val.set_text_content(Some(
-    //                 &pos.iter()
-    //                     .map(|x| {
-    //                         // padded format to hopefully make it more readable
-    //                         format!(
-    //                             "[{}]",
-    //                             x.iter()
-    //                                 .map(|x| format!("{:>2}", x))
-    //                                 .collect::<Vec<String>>()
-    //                                 .join(", ")
-    //                         )
-    //                     })
-    //                     .collect::<Vec<String>>()
-    //                     .join("\n"),
-    //             ));
-    //         }
-    //     }
-    // }
-    // start at first row and perform rref
     for c in 0..pos[0].len() - 1 {
         let pivot = pivot(pos, c);
         let scale_value = pos[c][pivot];
@@ -274,5 +252,21 @@ impl<'a> Csv<'a, (f32, f32)> {
             }
         }
         (x, y)
+    }
+}
+
+pub struct Constraint {
+    constraint: usize,
+    position: (f32, f32),
+    velocity: (f32, f32),
+}
+
+impl Constraint {
+    fn from_values(values: Vec<(f32, f32, f32, f32)>) -> Vec<Self> {
+        values.into_iter().enumerate().map(|(i, c)| Self {
+            constraint: i,
+            position: (c.0, c.1),
+            velocity: (c.2, c.3),
+        }).collect()
     }
 }
