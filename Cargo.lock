@@ -34,20 +34,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apriltag-jni"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "apriltag",
- "image",
- "lazy_static",
- "mat2image",
- "opencv",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "apriltag-sys"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -253,6 +239,20 @@ dependencies = [
  "nanorand",
  "pin-project",
  "spin",
+]
+
+[[package]]
+name = "frc-controls"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "apriltag",
+ "image",
+ "lazy_static",
+ "mat2image",
+ "opencv",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

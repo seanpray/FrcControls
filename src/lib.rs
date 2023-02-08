@@ -1,4 +1,6 @@
 use anyhow::Result;
+use std::sync::mpsc::channel;
+use std::path::Path;
 use apriltag::MatdRef;
 use apriltag::{DetectorBuilder, Family, TagParams};
 use mat2image::ToImage;
@@ -9,9 +11,90 @@ use opencv::prelude::VideoCaptureTraitConst;
 use opencv::{core::Scalar, highgui, imgproc, videoio};
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex, RwLock};
 use std::{thread, time::Duration, time::Instant};
-use crate::Field;
-use crate::{INSTRUCTION_UPDATE, RUNTIME_CACHE, OP, FIELD_DATA_NAME};
+use serde::Deserialize;
+use std::fs::read_to_string;
+use std::error::Error;
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct Quaternion {
+    W: f64,
+    X: f64,
+    Y: f64,
+    Z: f64,
+}
+
+#[derive(Deserialize)]
+struct TagRotation {
+    quaternion: Quaternion,
+}
+
+#[derive(Deserialize)]
+struct Translation {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+#[derive(Deserialize)]
+struct Pose {
+    translation: Translation,
+    rotation: TagRotation,
+}
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct Tag {
+    ID: u8,
+    pose: Pose,
+}
+
+#[derive(Deserialize)]
+struct FieldData {
+    length: f64,
+    width: f64,
+}
+
+#[derive(Deserialize)]
+pub (crate) struct Field {
+    tags: Vec<Tag>,
+    field: FieldData,
+}
+
+impl Field {
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self, Box<dyn Error>> {
+        let data = read_to_string(file)?;
+        let data: Field = serde_json::from_str(&data)?;
+        Ok(data)
+    }
+
+    pub fn reload_field<P: AsRef<Path>>(file: P) -> bool {
+        match Self::from_file(file) {
+            Ok(v) => {
+                *FIELD_DATA.write().unwrap() = v;
+                true
+            },
+            _ => false
+        }
+    }
+}
+
+pub enum OP {
+    ReloadField
+}
+
+pub const FIELD_DATA_NAME: &str = "2023-chargedup.json";
+
+lazy_static::lazy_static! {
+//     pub (crate) static ref DISPLAY_CACHE: Arc<Mutex<Vec<ScreenData>>> = Arc::new(Mutex::new(vec![]));
+    pub (crate) static ref FIELD_DATA: Arc<RwLock<Field>> = Arc::new(RwLock::new(Field::from_file(FIELD_DATA_NAME).unwrap()));
+    pub (crate) static ref RUNTIME_CACHE: Arc<Mutex<Vec<OP>>> = Arc::new(Mutex::new(vec![]));
+    pub (crate) static ref INSTRUCTION_UPDATE: AtomicBool = AtomicBool::from(false);
+}
+
 
 #[inline(always)]
 fn fabs(x: f64) -> f64 {
@@ -503,22 +586,37 @@ fn linear_transform(theta: f64, x: f64, z: f64) -> (f64, f64) {
     (x * theta.cos() - x * theta.sin(), x * theta.sin() + x * theta.cos())
 }
 
+macro_rules! compute {
+    // take xz tag data, convert x and y based on id
+    ($data:expr, $angle:expr, $tag:expr) => {
+        let d = $data.tags[$tag.0].pose;
+        let t = d.translation;
+        let (x, y) = linear_transform($angle, t.x, t.z);
+        
+
+    };
+}
+
 // transform based on camera id
 // compute robot position from static tag position
 #[inline(always)]
 fn compute_offset(cam_id: u8, id: u8, x: f64, y: f64, z: f64) -> Option<(f64, f64, f64)> {
+    let f_data = FIELD_DATA.read().unwrap();
+    if id as usize > f_data.tags.len() {
+        return None;
+    }
     match cam_id {
         0 => {
+            None
         },
         1 => {
-
+            None
         },
         2 => {
-
+            None
         },
-        _ => {}
+        _ => None
     }
-    None
 }
 
 // TODO: stick inside event loop, look up stuff from network table to add/remove instructions on
@@ -526,9 +624,12 @@ fn compute_offset(cam_id: u8, id: u8, x: f64, y: f64, z: f64) -> Option<(f64, f6
 fn compute_instruction() {
     if INSTRUCTION_UPDATE.load(std::sync::atomic::Ordering::Relaxed) {
         INSTRUCTION_UPDATE.swap(false, std::sync::atomic::Ordering::Relaxed);
-        match RUNTIME_CACHE.lock().unwrap().pop() {
+        let Some(v) = RUNTIME_CACHE.lock().unwrap().pop() else {
+            return;
+        };
+        match v {
             OP::ReloadField => {
-                let _ = FIELD_DATA = Field::reload_field(FIELD_DATA_NAME);
+                let _ = Field::reload_field(FIELD_DATA_NAME);
                 // maybe log on failure?
             },
             _ => {}
@@ -653,7 +754,7 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
     Ok(())
 }
 
-pub fn detect_loop(cam_index: i32) -> Result<()> {
+pub fn detect_loop_single(cam_index: i32) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
     cam.set(3, RES.0)?;
     cam.set(4, RES.1)?;
@@ -802,4 +903,147 @@ pub fn detect_loop(cam_index: i32) -> Result<()> {
             continue;
         }
     }
+}
+
+
+pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
+    let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
+    cam.set(3, RES.0)?;
+    cam.set(4, RES.1)?;
+    let _ = videoio::VideoCapture::is_opened(&cam)?;
+    let family: Family = Family::tag_16h5();
+    // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
+    let mut detector = DetectorBuilder::new()
+        .add_family_bits(family, 1)
+        .build()
+        .unwrap();
+
+    let mut start = Instant::now();
+    let mut frame_num = 0;
+    let mut first = true;
+    let (tx, rx) = channel();
+    thread::spawn(move || {
+        let tx = tx.clone();
+        loop {
+            let frame_time = Instant::now();
+            let mut frame = Mat::default();
+            if cam.read(&mut frame).is_err() {
+                thread::sleep(Duration::from_millis(10));
+                if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                    cam = v;
+                }
+                let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
+                let _ = cam.set(3, RES.0);
+                let _ = cam.set(4, RES.1);
+                let _ = videoio::VideoCapture::is_opened(&cam);
+                continue;
+            }
+            // if one frame took a long time we can ignore
+            if frame_num % 10 == 0 {
+                start = Instant::now();
+                frame_num = 0;
+            }
+            frame_num += 1;
+            if frame.size().unwrap().width == 0 || frame.size().unwrap().height == 0 {
+                thread::sleep(Duration::from_millis(10));
+            }
+
+            // TODO log here
+            let _ = tx.send(frame);
+            println!("capture {:?}", frame_time.elapsed().as_millis());
+        }
+    });
+    while let Ok(frame) = rx.recv() {
+        let Ok(frame_img) = frame.to_image() else {
+            continue;
+        };
+        let calc_time = Instant::now();
+        let detections = detector.detect(frame_img.to_luma8());
+
+        if first {
+            start = Instant::now();
+            first = false;
+        }
+        for det in detections {
+            if det.decision_margin() < 40.0 {
+                continue;
+            }
+            let pose = det.estimate_tag_pose(&TagParams {
+                tagsize: 0.152,
+                fx: 578.272,
+                fy: 578.272,
+                cx: 402.145,
+                cy: 221.506,
+            });
+            // println!("  - pose {}: {:#?}", index, pose);
+            if let Some(pose) = pose {
+                println!("id {:?}", det.id());
+                println!("translation {:?}", pose.translation());
+                println!("{}", matrix_to_heading(pose.rotation()).to_string());
+                let t = pose.translation().data();
+                let x = t[0];
+                let y = t[1];
+                let z = t[2];
+                println!(" x {}", x / 0.0254);
+                println!(" y {}", y / 0.0254);
+                println!(" z {}", z / 0.0254);
+                println!(" mag {}", (x * x + z * z).sqrt() / 0.0254);
+            }
+            // let corners = det.corners();
+            // let center = det.center();
+            // let _ = imgproc::line(
+            //     &mut frame,
+            //     opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
+            //     opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
+            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
+            //     4,
+            //     2,
+            //     0,
+            // );
+            // let _ = imgproc::line(
+            //     &mut frame,
+            //     opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
+            //     opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
+            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
+            //     4,
+            //     2,
+            //     0,
+            // );
+            // let _ = imgproc::line(
+            //     &mut frame,
+            //     opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
+            //     opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
+            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
+            //     4,
+            //     2,
+            //     0,
+            // );
+            // let _ = imgproc::line(
+            //     &mut frame,
+            //     opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
+            //     opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
+            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
+            //     4,
+            //     2,
+            //     0,
+            // );
+            // let _ = imgproc::circle(
+            //     &mut frame,
+            //     opencv::core::Point_::new(center[0] as i32, center[1] as i32),
+            //     5,
+            //     Scalar::new(255f64, 255f64, 0f64, 0f64),
+            //     2,
+            //     2,
+            //     0,
+            // );
+        }
+        println!("calc {:?}", calc_time.elapsed().as_millis());
+        println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
+        // *(DISPLAY_CACHE.lock()).push(frame.clone());
+        // highgui::imshow(&format!("seancv{cam_index}"), &frame)?;
+        // if highgui::wait_key(1)? > 0 {
+        //     continue;
+        // }
+    }
+    Ok(())
 }
