@@ -589,11 +589,11 @@ fn linear_transform(theta: f64, x: f64, z: f64) -> (f64, f64) {
 macro_rules! compute {
     // take xz tag data, convert x and y based on id
     ($data:expr, $angle:expr, $tag:expr) => {
-        let d = $data.tags[$tag.0].pose;
-        let t = d.translation;
-        let (x, y) = linear_transform($angle, t.x, t.z);
-        
-
+        {
+            let d = &$data.tags[$tag as usize].pose;
+            let t = &d.translation;
+            linear_transform($angle, t.x, t.z)
+        }
     };
 }
 
@@ -610,10 +610,12 @@ fn compute_offset(cam_id: u8, id: u8, x: f64, y: f64, z: f64) -> Option<(f64, f6
             None
         },
         1 => {
-            None
+            let (x, y) = compute!(f_data, 30.0, id);
+            Some((x, y, z))
         },
         2 => {
-            None
+            let (x, y) = compute!(f_data, 150.0, id);
+            Some((x, y, z))
         },
         _ => None
     }
@@ -945,7 +947,7 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
             }
             frame_num += 1;
             if frame.size().unwrap().width == 0 || frame.size().unwrap().height == 0 {
-                thread::sleep(Duration::from_millis(10));
+                thread::sleep(Duration::from_millis(1));
             }
 
             // TODO log here
@@ -989,61 +991,9 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
                 println!(" z {}", z / 0.0254);
                 println!(" mag {}", (x * x + z * z).sqrt() / 0.0254);
             }
-            // let corners = det.corners();
-            // let center = det.center();
-            // let _ = imgproc::line(
-            //     &mut frame,
-            //     opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
-            //     opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
-            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-            //     4,
-            //     2,
-            //     0,
-            // );
-            // let _ = imgproc::line(
-            //     &mut frame,
-            //     opencv::core::Point_::new(corners[0][0] as i32, corners[0][1] as i32),
-            //     opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
-            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-            //     4,
-            //     2,
-            //     0,
-            // );
-            // let _ = imgproc::line(
-            //     &mut frame,
-            //     opencv::core::Point_::new(corners[3][0] as i32, corners[3][1] as i32),
-            //     opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
-            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-            //     4,
-            //     2,
-            //     0,
-            // );
-            // let _ = imgproc::line(
-            //     &mut frame,
-            //     opencv::core::Point_::new(corners[2][0] as i32, corners[2][1] as i32),
-            //     opencv::core::Point_::new(corners[1][0] as i32, corners[1][1] as i32),
-            //     Scalar::new(255f64, 255f64, 0f64, 0f64), // color value
-            //     4,
-            //     2,
-            //     0,
-            // );
-            // let _ = imgproc::circle(
-            //     &mut frame,
-            //     opencv::core::Point_::new(center[0] as i32, center[1] as i32),
-            //     5,
-            //     Scalar::new(255f64, 255f64, 0f64, 0f64),
-            //     2,
-            //     2,
-            //     0,
-            // );
         }
         println!("calc {:?}", calc_time.elapsed().as_millis());
         println!("fps {:?}", frame_num as f32 / start.elapsed().as_secs_f32());
-        // *(DISPLAY_CACHE.lock()).push(frame.clone());
-        // highgui::imshow(&format!("seancv{cam_index}"), &frame)?;
-        // if highgui::wait_key(1)? > 0 {
-        //     continue;
-        // }
     }
     Ok(())
 }

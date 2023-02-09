@@ -10,20 +10,13 @@ package frc.robot.subsystems;
 import com.revrobotics.CANSparkMax;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
-import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveOdometry;
-import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADXRS450_Gyro;
-import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -39,8 +32,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   /*
   Initialize drivebase motors from constants
   */
-  CANSparkMax leftFront = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  CANSparkMax leftBack = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  CANSparkMax leftFront = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
 
@@ -150,14 +143,18 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   }
 
   public double curve(double v) {
-    double c = (Math.sqrt(v) - curve_b);
-    return c < 0.0 ? 0.0 : c > 1.0 ? 1.0 : c;
+    var negative = v < 0.0;
+    var c = (Math.sqrt(Math.abs(v)) - curve_b);
+    var curved = c < 0.0 ? 0.0 : c > 1.0 ? 1.0 : c;
+    return negative ? -curved : curved;
   }
 
- 
+  public final double dead_zone = 0.01;
 
   @Override
   public void periodic() {
+    rightFront.setInverted(true);
+    rightBack.setInverted(true);
     
     //   var wheelPositions = new MecanumDriveWheelPositions(
     //   leftFront.getEncoder().getPosition(), rightFront.getEncoder().getPosition(),
@@ -167,43 +164,52 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     // var gyroAngle = gyro.getRotation2d();
 
     // Update the pose
-    double y = -RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
-    double x = RobotContainer.oi.driver.getLeftX() * 1.1; // Counteract imperfect strafing
-    double rx = RobotContainer.oi.driver.getRightX();
-    if (y < 0.05) {
+    double x = RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
+    double y = RobotContainer.oi.driver.getLeftX() * 1.1; // Counteract imperfect strafing
+    double rx = -RobotContainer.oi.driver.getRightX();
+    if (y < dead_zone && y > -dead_zone) {
       y = 0;
     }
-    if (x < 0.05) {
+    if (x < dead_zone && x > -dead_zone) {
       x = 0;
     }
-    if (rx < 0.05) {
+    if (rx < dead_zone && rx > -dead_zone) {
       rx = 0;
     }
 
-    double multiplier = 0.6;
+    double multiplier = 0.2;
     if (RobotContainer.oi.driver.getAButton()) {
       multiplier = 1;
     }
 
-    double botHeading = gyro.getXComplementaryAngle();
+    double botHeading = -gyro.getAngle() * Math.PI / 180.0;
 
     // m_pose = m_odometry.update(gyroAngle, wheelPositions);
-  //    // Rotate the movement direction counter to the bot's rotation
-     double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
-     double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+    // Rotate the movement direction counter to the bot's rotation
+    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
 
-     // Denominator is the largest motor power (absolute value) or 1
-     // This ensures all the powers maintain the same ratio, but only when
-     // at least one is out of the range [-1, 1]
-     double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-     double frontLeftPower = (rotY + rotX + rx) / denominator;
-     double backLeftPower = (rotY - rotX + rx) / denominator;
-     double frontRightPower = (rotY - rotX - rx) / denominator;
-     double backRightPower = (rotY + rotX - rx) / denominator;
-     leftFront.set(curve(frontLeftPower * multiplier));
-     leftBack.set(curve(backLeftPower * multiplier));
-     rightFront.set(-curve(frontRightPower * multiplier));
-     rightBack.set(-curve(backRightPower * multiplier));
+    // Denominator is the largest motor power (absolute value) or 1
+    // This ensures all the powers maintain the same ratio, but only when
+    // at least one is out of the range [-1, 1]
+    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+    double frontLeftPower = (rotY + rotX + rx) / denominator;
+    double backLeftPower = (rotY - rotX + rx) / denominator;
+    double frontRightPower = (rotY - rotX - rx) / denominator;
+    double backRightPower = (rotY + rotX - rx) / denominator;
+    // leftFront.set(frontLeftPower * multiplier);
+    // leftBack.set(backLeftPower * multiplier);
+    // rightFront.set(-frontRightPower * multiplier);
+    // rightBack.set(-backRightPower * multiplier);
+    // double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
+    // double frontLeftPower = (y + x + rx) / denominator;
+    // double backLeftPower = (y - x + rx) / denominator;
+    // double frontRightPower = (y - x - rx) / denominator;
+    // double backRightPower = (y + x - rx) / denominator;
+    leftFront.set(frontLeftPower * multiplier);
+    leftBack.set(backLeftPower * multiplier);
+    rightFront.set(frontRightPower * multiplier);
+    rightBack.set(backRightPower * multiplier);
   }
 
   /**

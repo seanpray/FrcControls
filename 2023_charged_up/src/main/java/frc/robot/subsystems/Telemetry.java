@@ -11,20 +11,16 @@ public class Telemetry {
         
     }
 
-    public void update() {
-    }
+    public void update() {}
     public void pid() {
         ShuffleboardTab tab = Shuffleboard.getTab("Motor 1");
-        NetworkTableEntry shooterEnable = tab.add("PID 1 Enable", true).getEntry();
+        NetworkTableEntry m1 = tab.add("PID 1 Enable", true).getEntry();
 
         // Command Example assumed to be in a PIDSubsystem
-        new NetworkButton(shooterEnable).onTrue(new InstantCommand(m_shooter::enable));
+        new NetworkButton(m1).whenActive(null);
 
         // Timed Robot Example
-        if (shooterEnable.getBoolean()) {
-        // Calculates the output of the PID algorithm based on the sensor reading
-        // and sends it to a motor
-            motor.set(pid.calculate(encoder.getDistance(), setpoint));
+        if (m1.getBoolean(true)) {
         }
     }
 }

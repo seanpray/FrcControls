@@ -14,3 +14,4 @@ opencv = { version = "=0.74.0", default-features = false, features = ["rgb", "vi
 lazy_static = "1.4.0"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
+nt = { git = "https://github.com/first-rust-competition/nt-rs", rev = "28f100e675c7b6a4a09557c844b37855fb3c5051" }
