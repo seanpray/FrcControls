@@ -42,7 +42,7 @@ public class RobotContainer {
     public final static DrivetrainSubsystem drivetrain = new DrivetrainSubsystem();
 
     public final static Intake intake = new Intake();
-    public final Shooter shooter = new Shooter();
+    // public final Shooter shooter = new Shooter();
   
     public static OI oi = new OI();
 
@@ -74,11 +74,11 @@ public class RobotContainer {
     new JoystickButton(oi.driver, 6)
       .whileActiveContinuous(new InstantCommand(intake::reverseIntake)); 
 
-    new JoystickButton(oi.driver, 1)
-      .whenPressed(new InstantCommand(shooter::startFlywheel, shooter));
+    // new JoystickButton(oi.driver, 1)
+      // .whenPressed(new InstantCommand(shooter::startFlywheel, shooter));
 
-    new JoystickButton(oi.driver, 2)
-      .whenPressed(new InstantCommand(shooter::stopFlywheel, shooter));
+    // new JoystickButton(oi.driver, 2)
+      // .whenPressed(new InstantCommand(shooter::stopFlywheel, shooter));
 
   
     // new JoystickButton(oi.driver, 4)

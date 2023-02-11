@@ -165,7 +165,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
     // Update the pose
     double x = RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
-    double y = RobotContainer.oi.driver.getLeftX() * 1.1; // Counteract imperfect strafing
+    double y = -RobotContainer.oi.driver.getLeftX(); // Counteract imperfect strafing
     double rx = -RobotContainer.oi.driver.getRightX();
     if (y < dead_zone && y > -dead_zone) {
       y = 0;
