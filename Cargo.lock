@@ -26,6 +26,7 @@ checksum = "595d3cfa7a60d4555cb5067b99f07142a08ea778de5cf993f7b75c7d8fabc486"
 [[package]]
 name = "apriltag"
 version = "0.3.1"
+source = "git+https://github.com/notseanray/apriltag-rust#f91672f1610ceaf72d7fd3f2b6d6e4fd97426306"
 dependencies = [
  "apriltag-sys",
  "image",

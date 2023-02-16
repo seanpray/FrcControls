@@ -29,16 +29,17 @@ struct ScreenData {
 
 fn main() -> Result<()> {
     // let _ = detect_loop(0);
-    let i = 0;
-        let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
-        let _ = detect_loop_single(i);
-    loop {}
-    for i in 0..4 {
-        let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
-        thread::spawn(move || {
-            let _ = detect_loop_single(i);
-        });
-    }
+    // let i = 0;
+    //     let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
+        let _ = detect_loop_single(0);
+    // loop {}
+    // for i in 0..4 {
+    //     let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
+    //     thread::spawn(move || {
+    //         let _ = detect_loop_single(i);
+    //     });
+    // }
+    // let _ = detect_loop_hybrid(0);
     loop {
         // let d = DISPLAY_CACHE.lock().unwrap();
         // if let Some(v) = d {

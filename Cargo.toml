@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-apriltag = { path = "../apriltag-rust/", features = ["image"] }
+apriltag = { git = "https://github.com/notseanray/apriltag-rust", features = ["image"] }
 anyhow = "=1.0.42"
 image = "=0.24"
 mat2image = { version = "=0.2.0", features = ["rayon"] }

@@ -590,9 +590,10 @@ macro_rules! compute {
     // take xz tag data, convert x and y based on id
     ($data:expr, $angle:expr, $tag:expr) => {
         {
-            let d = &$data.tags[$tag as usize].pose;
+            let d = &$data.tags[$tag].pose;
             let t = &d.translation;
-            linear_transform($angle, t.x, t.z)
+            let (x, y) = linear_transform($angle, t.x, t.z);
+            (x, y)
         }
     };
 }
@@ -600,25 +601,16 @@ macro_rules! compute {
 // transform based on camera id
 // compute robot position from static tag position
 #[inline(always)]
-fn compute_offset(cam_id: u8, id: u8, x: f64, y: f64, z: f64) -> Option<(f64, f64, f64)> {
+fn compute_offset(cam_id: usize, id: usize, x: f64, y: f64, z: f64) -> Option<(f64, f64, f64)> {
     let f_data = FIELD_DATA.read().unwrap();
-    if id as usize > f_data.tags.len() {
+    if id > f_data.tags.len() {
         return None;
     }
-    match cam_id {
-        0 => {
-            None
-        },
-        1 => {
-            let (x, y) = compute!(f_data, 30.0, id);
-            Some((x, y, z))
-        },
-        2 => {
-            let (x, y) = compute!(f_data, 150.0, id);
-            Some((x, y, z))
-        },
-        _ => None
+    if cam_id > 2 {
+        return None;
     }
+    let (x_i, y_i) = compute!(f_data, cam_id as f64 * 30.0, id);
+    Some((x_i - x, y_i - y, z))
 }
 
 // TODO: stick inside event loop, look up stuff from network table to add/remove instructions on
@@ -639,7 +631,7 @@ fn compute_instruction() {
     }
 }
 
-static RES: (f64, f64) = (800.0, 440.0);
+static RES: (f64, f64) = (1920.0, 1080.0);
 
 pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
@@ -662,7 +654,8 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
             let mut frame = Mat::default();
             if cam.read(&mut frame).is_err() {
                 thread::sleep(Duration::from_millis(50));
-                if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                if let Ok(mut v) = videoio::VideoCapture::new(0, videoio::CAP_DSHOW) {
+                    // let _ = v.set(videoio::CAP_PROP_EXPOSURE, -10.0);
                     cam = v;
                 }
                 let _ = cam.set(3, RES.0);
@@ -671,7 +664,7 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
                 continue;
             }
             // if one frame took a long time we can ignore
-            if frame_num % 10 == 0 {
+            if frame_num % 30 == 0 {
                 start = Instant::now();
                 frame_num = 0;
             }
@@ -687,7 +680,7 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
             // }
 
             let Ok(frame_img) = frame.to_image() else {
-                thread::sleep(Duration::from_millis(50));
+                thread::sleep(Duration::from_millis(1));
                 if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
                     cam = v;
                 }
@@ -762,6 +755,9 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
     cam.set(4, RES.1)?;
     let _ = videoio::VideoCapture::is_opened(&cam)?;
     let family: Family = Family::tag_16h5();
+    let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
+    let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
+            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
     // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
     let mut detector = DetectorBuilder::new()
         .add_family_bits(family, 1)
@@ -776,12 +772,18 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
         let mut frame = Mat::default();
         if cam.read(&mut frame).is_err() {
             thread::sleep(Duration::from_millis(50));
-            if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+            if let Ok(mut v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                // let _ = v.set(videoio::CAP_PROP_EXPOSURE, -10.0);
+                let _ = v.set(videoio::CAP_PROP_FPS, 60.0);
                 cam = v;
             }
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, RES.0);
             let _ = cam.set(4, RES.1);
+            // let _ = cam.set(videoio::CAP_PROP_EXPOSURE, -10.0);
+            let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
+            let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
+            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         }
@@ -803,12 +805,16 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
 
         let Ok(frame_img) = frame.to_image() else {
             thread::sleep(Duration::from_millis(50));
-            if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+            if let Ok(mut v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
+                // let _ = v.set(videoio::CAP_PROP_EXPOSURE, -10.0);
+                let _ = v.set(videoio::CAP_PROP_FPS, 60.0);
                 cam = v;
             }
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, RES.0);
+    let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
             let _ = cam.set(4, RES.1);
+            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         };
@@ -961,6 +967,7 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
         };
         let calc_time = Instant::now();
         let detections = detector.detect(frame_img.to_luma8());
+        frame_num += 1;
 
         if first {
             start = Instant::now();
@@ -990,6 +997,8 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
                 println!(" y {}", y / 0.0254);
                 println!(" z {}", z / 0.0254);
                 println!(" mag {}", (x * x + z * z).sqrt() / 0.0254);
+                // cam id
+                compute_offset(0, det.id(), x, z, y);
             }
         }
         println!("calc {:?}", calc_time.elapsed().as_millis());
