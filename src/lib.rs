@@ -1,6 +1,4 @@
 use anyhow::Result;
-use std::sync::mpsc::channel;
-use std::path::Path;
 use apriltag::MatdRef;
 use apriltag::{DetectorBuilder, Family, TagParams};
 use mat2image::ToImage;
@@ -9,14 +7,17 @@ use opencv::prelude::MatTraitConstManual;
 use opencv::prelude::VideoCaptureTrait;
 use opencv::prelude::VideoCaptureTraitConst;
 use opencv::{core::Scalar, highgui, imgproc, videoio};
+use serde::Deserialize;
+use std::error::Error;
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::PI;
-use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex, RwLock};
-use std::{thread, time::Duration, time::Instant};
-use serde::Deserialize;
 use std::fs::read_to_string;
-use std::error::Error;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::channel;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::SystemTime;
+use std::{thread, time::Duration, time::Instant};
 
 #[allow(non_snake_case)]
 #[derive(Deserialize)]
@@ -59,7 +60,7 @@ struct FieldData {
 }
 
 #[derive(Deserialize)]
-pub (crate) struct Field {
+pub(crate) struct Field {
     tags: Vec<Tag>,
     field: FieldData,
 }
@@ -76,14 +77,61 @@ impl Field {
             Ok(v) => {
                 *FIELD_DATA.write().unwrap() = v;
                 true
-            },
-            _ => false
+            }
+            _ => false,
+        }
+    }
+}
+
+struct NetworkTableEntries {
+    heading: f64,
+    location_x: f64,
+    location_z: f64,
+    location_y: f64,
+    tolerance: f64,
+    rotational_tolerance: f64,
+    invalid_tags: f64,
+    velocity_x: f64,
+    velocity_z: f64,
+    velocity_y: f64,
+    frame_time: u128,
+}
+
+impl NetworkTableEntries {
+    #[allow(clippy::too_many_arguments)]
+    pub fn generate(
+        heading: f64,
+        location_x: f64,
+        location_z: f64,
+        location_y: f64,
+        tolerance: f64,
+        rotational_tolerance: f64,
+        invalid_tags: f64,
+        velocity_x: f64,
+        velocity_z: f64,
+        velocity_y: f64,
+    ) -> Self {
+        Self {
+            heading,
+            location_x,
+            location_z,
+            location_y,
+            tolerance,
+            rotational_tolerance,
+            invalid_tags,
+            velocity_x,
+            velocity_z,
+            velocity_y,
+            frame_time: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
         }
     }
 }
 
 pub enum OP {
-    ReloadField
+    ReloadField,
 }
 
 pub const FIELD_DATA_NAME: &str = "2023-chargedup.json";
@@ -94,7 +142,6 @@ lazy_static::lazy_static! {
     pub (crate) static ref RUNTIME_CACHE: Arc<Mutex<Vec<OP>>> = Arc::new(Mutex::new(vec![]));
     pub (crate) static ref INSTRUCTION_UPDATE: AtomicBool = AtomicBool::from(false);
 }
-
 
 #[inline(always)]
 fn fabs(x: f64) -> f64 {
@@ -107,25 +154,25 @@ fn fabs(x: f64) -> f64 {
 const ATANHI: [f64; 4] = [
     4.636_476_090_008_061e-1, /* atan(0.5)hi 0x3FDDAC67, 0x0561BB4F */
     7.853_981_633_974_483e-1, /* atan(1.0)hi 0x3FE921FB, 0x54442D18 */
-    9.827_937_232_473_29e-1, /* atan(1.5)hi 0x3FEF730B, 0xD281F69B */
-    FRAC_PI_2, /* atan(inf)hi 0x3FF921FB, 0x54442D18 */
+    9.827_937_232_473_29e-1,  /* atan(1.5)hi 0x3FEF730B, 0xD281F69B */
+    FRAC_PI_2,                /* atan(inf)hi 0x3FF921FB, 0x54442D18 */
 ];
 
 const ATANLO: [f64; 4] = [
     2.269_877_745_296_168_7e-17, /* atan(0.5)lo 0x3C7A2B7F, 0x222F65E2 */
-    3.061_616_997_868_383e-17, /* atan(1.0)lo 0x3C81A626, 0x33145C07 */
+    3.061_616_997_868_383e-17,   /* atan(1.0)lo 0x3C81A626, 0x33145C07 */
     1.390_331_103_123_099_8e-17, /* atan(1.5)lo 0x3C700788, 0x7AF0CBBD */
-    6.123_233_995_736_766e-17, /* atan(inf)lo 0x3C91A626, 0x33145C07 */
+    6.123_233_995_736_766e-17,   /* atan(inf)lo 0x3C91A626, 0x33145C07 */
 ];
 
 const AT: [f64; 11] = [
-    3.333_333_333_333_293e-1,  /* 0x3FD55555, 0x5555550D */
+    3.333_333_333_333_293e-1,    /* 0x3FD55555, 0x5555550D */
     -1.999_999_999_987_648_3e-1, /* 0xBFC99999, 0x9998EBC4 */
     1.428_571_427_250_346_6e-1,  /* 0x3FC24924, 0x920083FF */
     -1.111_111_040_546_235_6e-1, /* 0xBFBC71C6, 0xFE231671 */
-    9.090_887_133_436_507e-2,  /* 0x3FB745CD, 0xC54C206E */
-    -7.691_876_205_044_83e-2, /* 0xBFB3B0F2, 0xAF749A6D */
-    6.661_073_137_387_531e-2,  /* 0x3FB10D66, 0xA0D03D51 */
+    9.090_887_133_436_507e-2,    /* 0x3FB745CD, 0xC54C206E */
+    -7.691_876_205_044_83e-2,    /* 0xBFB3B0F2, 0xAF749A6D */
+    6.661_073_137_387_531e-2,    /* 0x3FB10D66, 0xA0D03D51 */
     -5.833_570_133_790_573_5e-2, /* 0xBFADDE2D, 0x52DEFD9A */
     4.976_877_994_615_932_4e-2,  /* 0x3FA97B4B, 0x24760DEB */
     -3.653_157_274_421_691_6e-2, /* 0xBFA2B444, 0x2C6A6C2F */
@@ -583,19 +630,21 @@ fn matrix_to_heading(m: MatdRef) -> Rotation {
 // take x and z position then apply a counter clockwise linear transformation to adjust the offset
 #[inline(always)]
 fn linear_transform(theta: f64, x: f64, z: f64) -> (f64, f64) {
-    (x * theta.cos() - x * theta.sin(), x * theta.sin() + x * theta.cos())
+    (
+        x * theta.cos() - x * theta.sin(),
+        x * theta.sin() + x * theta.cos(),
+    )
 }
 
 macro_rules! compute {
     // take xz tag data, convert x and y based on id
-    ($data:expr, $angle:expr, $tag:expr) => {
-        {
-            let d = &$data.tags[$tag].pose;
-            let t = &d.translation;
-            let (x, y) = linear_transform($angle, t.x, t.z);
-            (x, y)
-        }
-    };
+    ($data:expr, $angle:expr, $tag:expr) => {{
+        let d = &$data.tags[$tag].pose;
+        let t = &d.translation;
+        let mag = (t.x.powf(2.0) + t.z.powf(2.0)).sqrt();
+        // let (x, y) = linear_transform($angle, t.x, t.z);
+        (mag * $angle.cos(), mag * $angle.sin())
+    }};
 }
 
 // transform based on camera id
@@ -625,9 +674,67 @@ fn compute_instruction() {
             OP::ReloadField => {
                 let _ = Field::reload_field(FIELD_DATA_NAME);
                 // maybe log on failure?
-            },
+            }
             _ => {}
         }
+    }
+}
+
+fn quaternion_to_rotation(q: Quaternion) -> Rotation {
+    Rotation {
+        heading: atan2(
+            2.0 * (q.Z * q.W + q.X * q.Y),
+            -1.0 + 2.0 * (q.W * q.W + q.X * q.X),
+        ),
+        roll: atan2(
+            2.0 * (q.Z * q.Y + q.W * q.X),
+            1.0 - 2.0 * (q.X * q.X + q.Y * q.Y),
+        ),
+        pitch: atan(2.0 * (q.Y * q.W - q.Z * q.X)),
+    }
+}
+
+static G_ACCEL: f64 = 9.80665;
+
+// TODO use macro for input
+// kg, drag coef, time step, x, z, y, tolerance (ft)
+// position 0 is robot, target is relative
+#[allow(non_snake_case)]
+fn eulers_method_drag(
+    mass: f64,
+    k: f64,
+    dt: f64,
+    v: (f64, f64, f64),
+    a: (f64, f64, f64),
+    target: (f64, f64, f64),
+    epsilon: f64,
+    max_iter: usize,
+) {
+    let mut t = dt;
+    let mut x = 0.0;
+    let mut z = 0.0;
+    let mut y = 0.0;
+    let mut Vx = v.0;
+    let mut Vz = v.1;
+    let mut Vy = v.2;
+    let mut Ax = a.0;
+    // need to measure realistic accel
+    let mut Az = a.1;
+    let mut Ay = a.2 - G_ACCEL;
+    let mut iter = 0;
+    while iter < max_iter
+        && ((x - target.0).abs() < epsilon
+            && (z - target.1).abs() < epsilon
+            && (y - target.2).abs() < epsilon)
+    {
+        x += dt * Vx;
+        z += dt * Vz;
+        y += dt * Vy;
+        Vx += Ax - k * Vx.powf(2.0) * dt;
+        Vz += Az - k * Vz.powf(2.0) * dt;
+        Vy += Ay - k * Vy.powf(2.0) * dt;
+        t += dt;
+        iter += 1;
     }
 }
 
@@ -670,7 +777,9 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
             }
             frame_num += 1;
             let calc_time = Instant::now();
-            if frame.size().unwrap_or_default().width == 0 || frame.size().unwrap_or_default().height == 0 {
+            if frame.size().unwrap_or_default().width == 0
+                || frame.size().unwrap_or_default().height == 0
+            {
                 thread::sleep(Duration::from_millis(10));
             }
 
@@ -756,8 +865,13 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
     let _ = videoio::VideoCapture::is_opened(&cam)?;
     let family: Family = Family::tag_16h5();
     let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
-    let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
-            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
+    let _ = cam.set(
+        videoio::CAP_PROP_FOURCC,
+        videoio::VideoWriter::fourcc('m', 'j', 'p', 'g')
+            .unwrap()
+            .into(),
+    );
+    let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
     // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
     let mut detector = DetectorBuilder::new()
         .add_family_bits(family, 1)
@@ -781,7 +895,12 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             let _ = cam.set(3, RES.0);
             let _ = cam.set(4, RES.1);
             // let _ = cam.set(videoio::CAP_PROP_EXPOSURE, -10.0);
-            let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
+            let _ = cam.set(
+                videoio::CAP_PROP_FOURCC,
+                videoio::VideoWriter::fourcc('m', 'j', 'p', 'g')
+                    .unwrap()
+                    .into(),
+            );
             let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
             let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
@@ -912,7 +1031,6 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
         }
     }
 }
-
 
 pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;

@@ -12,6 +12,7 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.SparkMaxAlternateEncoder;
 import com.revrobotics.SparkMaxPIDController;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
@@ -19,9 +20,9 @@ import edu.wpi.first.math.kinematics.MecanumDriveOdometry;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.CounterBase;
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -42,13 +43,17 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   private double m2avg = 0;
   private double m3avg = 0;
   private double m4avg = 0;
-  private double iter = 0;
+  private double setpoint = 0;
 
   private CANSparkMax m_motor;
   private SparkMaxPIDController m_pidController;
   public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput;
   private double counter = 0;
   private double gyro_offset = 0;
+  private double max_motor = 0;
+  private boolean autopid = true;
+  private boolean first = true;
+  private int piditer = 0;
   /*
   Initialize drivebase motors from constants
   */
@@ -56,6 +61,14 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  // Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
+  // Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
+  // Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
+  // Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
+  Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
+  Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
+  Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
+  Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
 
   Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
   Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
@@ -95,40 +108,9 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     leftBack.restoreFactoryDefaults();
     rightFront.restoreFactoryDefaults();
     rightBack.restoreFactoryDefaults();
-    leftFront.getAlternateEncoder(kAltEncType, kCPR).setPosition(0);
-    leftBack.getAlternateEncoder(kAltEncType, kCPR).setPosition(0);
-    rightFront.getAlternateEncoder(kAltEncType, kCPR).setPosition(0);
-    rightBack.getAlternateEncoder(kAltEncType, kCPR).setPosition(0);
 
     // Sets the distance per pulse for the encoders to translate from encoder ticks to meters
-    leftBack.getAlternateEncoder(kAltEncType, kCPR).setPositionConversionFactor(encoderConstant);
-leftFront.getAlternateEncoder(kAltEncType, kCPR).setPositionConversionFactor(encoderConstant);
-    rightFront.getAlternateEncoder(kAltEncType, kCPR).setPositionConversionFactor(encoderConstant);
-    rightBack.getAlternateEncoder(kAltEncType, kCPR).setPositionConversionFactor(encoderConstant);
     // rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
-
-    // for velocity divide by 60 for some reason idk
-    leftBack.getAlternateEncoder(kAltEncType, kCPR).setVelocityConversionFactor(encoderConstant/60);
-  leftFront.getAlternateEncoder(kAltEncType, kCPR).setVelocityConversionFactor(encoderConstant/60);
-rightFront.getAlternateEncoder(kAltEncType, kCPR).setVelocityConversionFactor(encoderConstant/60);
-rightBack.getAlternateEncoder(kAltEncType, kCPR).setVelocityConversionFactor(encoderConstant/60);
-
-leftFront.getPIDController().setFeedbackDevice(leftFront.getAlternateEncoder(kAltEncType, kCPR));
-    leftBack.getPIDController().setFeedbackDevice(leftBack.getAlternateEncoder(kAltEncType, kCPR));
-rightFront.getPIDController().setFeedbackDevice(rightFront.getAlternateEncoder(kAltEncType, kCPR));
-rightBack.getPIDController().setFeedbackDevice(rightBack.getAlternateEncoder(kAltEncType, kCPR));
-    // rightFront.getEncoder().setVelocityConversionFactor(encoderConstant/60);
-
-    //invert right front motor to drive forward
-    // rightFront.setInverted(true);
-
-
-    // initialize odometry with heading from gyro
-    // m_odometry = new MecanumDriveOdometry(
-    // m_drivetrain,
-    // gyro.getRotation2d(),
-    // new Pose2d(5.0, 13.5, new Rotation2d())
-  // );
 
     SmartDashboard.putData("Field", field);
 
@@ -175,7 +157,7 @@ rightBack.getPIDController().setFeedbackDevice(rightBack.getAlternateEncoder(kAl
   }
 
   public double curve(double v, boolean turbo) {
-    if (turbo) {
+    if (true) {
       return v;
     }
     var negative = v < 0.0;
@@ -190,16 +172,17 @@ rightBack.getPIDController().setFeedbackDevice(rightBack.getAlternateEncoder(kAl
 
   public double clamp(double v, double l, double u) {
     if (v > u) {
-      return u;
+      return u * 0.3;
     } else if (v < l) {
-      return l;
+      return l * 0.3;
     } else {
-      return v;
+      return v * 0.3;
     }
   }
 
   @Override
   public void periodic() {
+    counter++;
     // SmartDashboard.putData("leftFront", (Sendable) leftFront.getPIDController());
     // SmartDashboard.putData("leftBack", (Sendable) leftBack.getPIDController());
     // SmartDashboard.putData("rightFront", (Sendable) rightFront.getPIDController());
@@ -247,54 +230,36 @@ rightBack.getPIDController().setFeedbackDevice(rightBack.getAlternateEncoder(kAl
       gyro_offset = botHeading;
     }
 
-    m1avg += leftFront.getEncoder().getVelocity();
-    m2avg += rightFront.getEncoder().getVelocity();
-    m3avg += rightBack.getEncoder().getVelocity();
-    m4avg += leftBack.getEncoder().getVelocity();
-    iter++;
-    System.out.println(m1avg);
-    System.out.println("===============");
-    System.out.println("m1: " + m1avg / iter);
-    System.out.println("m2: " + m2avg / iter);
-    System.out.println("m3: " + m3avg / iter);
-    System.out.println("m4: " + m4avg / iter);
+    m1avg += leftFrontEncoder.getRate();
+    m2avg += rightFrontEncoder.getRate();
+    m3avg += rightBackEncoder.getRate();
+    m4avg += leftBackEncoder.getRate();
+    if (m1avg == 0.0) {
+      counter = 1;
+    }
+    counter++;
+    if (counter % 50 == 100) {
+      System.out.println("===============");
+      System.out.println("m1: " + m1avg / counter);
+      System.out.println("m2: " + m2avg / counter);
+      System.out.println("m3: " + m3avg / counter);
+      System.out.println("m4: " + m4avg / counter);
+    }
     botHeading -= gyro_offset;
 
-    // m_pose = m_odometry.update(gyroAngle, wheelPositions);
-    // Rotate the movement direction counter to the bot's rotation
-    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
+    // double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+    // double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
 
-    // Denominator is the largest motor power (absolute value) or 1
-    // This ensures all the powers maintain the same ratio, but only when
-    // at least one is out of the range [-1, 1]
-    // double max_p = Math.max(Math.max(PID.motor_1, PID.motor_2), Math.max(PID.motor_3, PID.motor_4));
-    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-    // double frontLeftPower = leftFront.getPIDController().getP() + (rotY + rotX + rx) / denominator;
-    // double backLeftPower = leftBack.getPIDController().getP() + (rotY - rotX + rx) / denominator;
-    // double frontRightPower = rightFront.getPIDController().getP() + (rotY - rotX - rx) / denominator;
-    // double backRightPower = rightBack.getPIDController().getP() + (rotY + rotX - rx) / denominator;
-    double frontLeftPower = (rotY + rotX + rx) / denominator;
-    double backLeftPower = (rotY - rotX + rx) / denominator;
-    double frontRightPower = (rotY - rotX - rx) / denominator;
-    double backRightPower = (rotY + rotX - rx) / denominator;
+    // double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+    // double frontLeftPower = (rotY + rotX + rx) / denominator;
+    // double backLeftPower = (rotY - rotX + rx) / denominator;
+    // double frontRightPower = (rotY - rotX - rx) / denominator;
+    // double backRightPower = (rotY + rotX - rx) / denominator;
 
-    leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
-    leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
-    rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
-    rightBack.set(clamp(curve(PID.motor_4 * backRightPower * multiplier, multiplier == 1), -1, 1));
-    // counter++;
-    // if (counter % 100 == 0) {
-    //   f = !f;
-    // }
-    // double power = -0.5;
-    // if (f) {
-    //   power = 0.5;
-    // }
-    // leftFront.set(power * PID.motor_1);
-    // leftBack.set(power * PID.motor_4);
-    // rightBack.set(power * PID.motor_3);
-    // rightFront.set(power * PID.motor_2);
+    // leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
+    // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
+    // rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
+    // rightBack.set(clamp(curve(PID.motor_4 * backRightPower * multiplier, multiplier == 1), -1, 1));
   }
 
   /**
