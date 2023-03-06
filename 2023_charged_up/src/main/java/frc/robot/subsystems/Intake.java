@@ -1,57 +1,77 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot.subsystems;
 
-import edu.wpi.first.wpilibj.motorcontrol.VictorSP;
+import com.revrobotics.CANSparkMax;
+
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.RobotContainer;
 
 public class Intake extends SubsystemBase {
-  /** Creates a new Intake. */
-  public Intake() {}
+    public static final int neo_rotations = 1350;
+    public static final int intake_rotationes = 19;
+    Compressor compressor = new Compressor(PneumaticsModuleType.REVPH);
+    CANSparkMax rotateNeo = new CANSparkMax(Constants.intake_rotate, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+    CANSparkMax intakeNeo = new CANSparkMax(Constants.intake_intake, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
 
-  public void initDefaultCommand() {
-    
-  }
+    DoubleSolenoid climbSolenoid = new DoubleSolenoid(9, PneumaticsModuleType.REVPH, 0,1);
+    boolean extended = false;
+    boolean compressor_status = false;
+    boolean flipped = false;
+    double initial_position = 0;
 
-  // initialize intake motor controller from intake constant
-  VictorSP intake = new VictorSP(Constants.intake);
+    public Intake() {
+        initial_position = rotateNeo.getEncoder().getPosition();
+        rotateNeo.restoreFactoryDefaults();
+        climbSolenoid.set(DoubleSolenoid.Value.kForward);
+        compressor.enableDigital();
+        compressor_status = true;
+    }
 
-  @Override
-  public void periodic() {
-    // This method will be called once per scheduler run
-    intake.set(0);
-  }
+    public void run_intake_in() {
+       intakeNeo.set(0.4); 
+    }
 
-  /**
-   * Drive the intake at a given power
-   * @param power power to drive the intake at
-   */
-  public void driveIntake(double power) {
-    intake.set(power);
-  }
+    public void run_intake_out() {
+       intakeNeo.set(-1); 
+    }
 
-  /**
-   * Defaults to setting the intake to half power
-   */ 
-  public void driveIntake() {
-    intake.set(-1);
-  }
+    public void flip_intake() {
+        flipped = !flipped;
+    }
 
-  /**
-   * Reverse the intake at half power
-   */
-  public void reverseIntake() {
-    intake.set(1);
-  }
+    public void toggleCompressor() {
+        if (compressor_status) {
+            compressor.disable();
+        } else {
+            compressor.enableDigital();
+        }
+        compressor_status = !compressor_status;
+    }
 
-  /**
-   * Stops the intake
-   */
-  public void stopIntake() {
-    intake.stopMotor();
-  }
+    @Override
+    public void periodic() {
+        double position = rotateNeo.getEncoder().getPosition();
+        // position -= initial_position;
+        // if (flipped && position > -18) {
+        //     rotateNeo.set(-0.5);
+        // } else if (!flipped && position < -3) {
+        //     rotateNeo.set(0.5);
+        // } else {
+        //     rotateNeo.set(0);
+        // }
+        rotateNeo.set(0);
+        intakeNeo.set(0);
+    }
+
+    public void toggle() {
+        if (extended) {
+            climbSolenoid.set(DoubleSolenoid.Value.kForward);
+        } else {
+            climbSolenoid.set(DoubleSolenoid.Value.kReverse);
+        }
+        extended = !extended;
+        // climbSolenoid.toggle();
+    }
 }

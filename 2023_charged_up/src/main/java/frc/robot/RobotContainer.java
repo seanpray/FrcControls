@@ -68,11 +68,19 @@ public class RobotContainer {
     /**
      * Bind button index 4 
      */
+    new JoystickButton(oi.driver, 4)
+      .whenPressed(new InstantCommand(intake::toggle));
     new JoystickButton(oi.driver, 5)
-      .whileActiveContinuous(new InstantCommand(intake::driveIntake));
-    
+      .whileActiveContinuous(new InstantCommand(intake::run_intake_in));
     new JoystickButton(oi.driver, 6)
-      .whileActiveContinuous(new InstantCommand(intake::reverseIntake)); 
+      .whileActiveContinuous(new InstantCommand(intake::run_intake_out));
+    // new JoystickButton(oi.driver, 5)
+    //   .whenPressed(new InstantCommand(intake::flip_intake));
+    // new JoystickButton(oi.driver, 6)
+    //   .whileActiveContinuous(new InstantCommand(intake::toggle));
+    
+    // new JoystickButton(oi.driver, 6)
+    //   .whenPressed(new InstantCommand(intake::toggleCompressor)); 
 
     // new JoystickButton(oi.driver, 1)
       // .whenPressed(new InstantCommand(shooter::startFlywheel, shooter));

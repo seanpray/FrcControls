@@ -18,14 +18,17 @@ public final class Constants {
 
     
     // Drivebase motor controller index values
-    // public final static int l1 = 1;
-    // public final static int l2 = 4;
-    // public final static int r1 = 2;
-    // public final static int r2 = 3;
-    public final static int l1 = 3;
-    public final static int l2 = 2;
-    public final static int r1 = 4;
-    public final static int r2 = 1;
+    public final static int l1 = 1;
+    public final static int l2 = 4;
+    public final static int r1 = 2;
+    public final static int r2 = 3;
+    // public final static int l1 = 3;
+    // public final static int l2 = 2;
+    // public final static int r1 = 4;
+    // public final static int r2 = 1;
+
+    public final static int intake_rotate = 6;
+    public final static int intake_intake = 5;
 
     // Flywheel and intake motor controller index values
     public final static int Flywheel = 1;

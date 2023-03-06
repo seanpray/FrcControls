@@ -25,15 +25,15 @@ public class autoGroup extends SequentialCommandGroup {
   addCommands(
 
     // start flywheel
-    new InstantCommand(m_shooter::startFlywheel, m_shooter),
+    // new InstantCommand(m_shooter::startFlywheel, m_shooter),
     // wait 5 seconds to let flywheel spin up
-    new WaitCommand(5),
+    // new WaitCommand(5),
     // start the intake to feed the preloaded ball to the shooter
-    new InstantCommand(m_intake::driveIntake, m_intake),
+    // new InstantCommand(m_intake::driveIntake, m_intake),
     // wait 1 second to let the ball feed
-    new WaitCommand(1),
+    // new WaitCommand(1),
     // stop the intake
-    new InstantCommand(m_intake::stopIntake, m_intake)
+    // new InstantCommand(m_intake::stopIntake, m_intake)
   );
   }
 }

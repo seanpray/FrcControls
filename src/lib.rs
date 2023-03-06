@@ -101,6 +101,8 @@ impl NetworkTableEntries {
     #[allow(clippy::too_many_arguments)]
     pub fn generate(
         heading: f64,
+        roll: f64,
+        pitch: f64,
         location_x: f64,
         location_z: f64,
         location_y: f64,
@@ -867,7 +869,7 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
     let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
     let _ = cam.set(
         videoio::CAP_PROP_FOURCC,
-        videoio::VideoWriter::fourcc('m', 'j', 'p', 'g')
+        videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
             .unwrap()
             .into(),
     );
@@ -897,7 +899,7 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             // let _ = cam.set(videoio::CAP_PROP_EXPOSURE, -10.0);
             let _ = cam.set(
                 videoio::CAP_PROP_FOURCC,
-                videoio::VideoWriter::fourcc('m', 'j', 'p', 'g')
+                videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
                     .unwrap()
                     .into(),
             );
@@ -931,7 +933,12 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             }
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, RES.0);
-    let _ = cam.set(videoio::CAP_PROP_FOURCC, videoio::VideoWriter::fourcc('m', 'j', 'p', 'g').unwrap().into());
+            let _ = cam.set(
+                videoio::CAP_PROP_FOURCC,
+                videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
+                    .unwrap()
+                    .into(),
+            );
             let _ = cam.set(4, RES.1);
             let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
