@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     // let _ = detect_loop(0);
     // let i = 0;
     //     let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
-        let _ = detect_loop_single(0);
+        // let _ = detect_loop_single(0);
     // loop {}
     // for i in 0..4 {
     //     let screen1 = highgui::named_window(&format!("seancv{i}"), i)?;
@@ -39,7 +39,9 @@ fn main() -> Result<()> {
     //         let _ = detect_loop_single(i);
     //     });
     // }
-    // let _ = detect_loop_hybrid(0);
+    for i in 0..4 {
+        let _ = detect_loop_hybrid(i);
+    }
     loop {
         // let d = DISPLAY_CACHE.lock().unwrap();
         // if let Some(v) = d {

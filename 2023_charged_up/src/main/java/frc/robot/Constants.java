@@ -22,13 +22,12 @@ public final class Constants {
     public final static int l2 = 4;
     public final static int r1 = 2;
     public final static int r2 = 3;
-    // public final static int l1 = 3;
-    // public final static int l2 = 2;
-    // public final static int r1 = 4;
-    // public final static int r2 = 1;
 
+    public final static int elevator_neo = 5;
     public final static int intake_rotate = 6;
-    public final static int intake_intake = 5;
+    public final static int intake_intake = 7;
+    public final static int fourbar_neo = 8;
+    public final static int bj_neo = 9;
 
     // Flywheel and intake motor controller index values
     public final static int Flywheel = 1;
@@ -39,7 +38,8 @@ public final class Constants {
 
     public static final double kTrackwidthMeters = 0.55245;
     // public static final DifferentialDriveKinematics kDriveKinematics =
-        // new DifferentialDriveKinematics(kTrackwidthMeters);
+        // new DifferentialDriveKinematics(kTrackwidthMeters);j
+        
 
     public static final int kEncoderCPR = 1024;
     public static final double kWheelDiameterMeters = 0.15;

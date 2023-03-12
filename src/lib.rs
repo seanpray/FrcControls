@@ -654,7 +654,7 @@ macro_rules! compute {
 #[inline(always)]
 fn compute_offset(cam_id: usize, id: usize, x: f64, y: f64, z: f64) -> Option<(f64, f64, f64)> {
     let f_data = FIELD_DATA.read().unwrap();
-    if id > f_data.tags.len() {
+    if id >= f_data.tags.len() {
         return None;
     }
     if cam_id > 2 {
@@ -740,7 +740,7 @@ fn eulers_method_drag(
     }
 }
 
-static RES: (f64, f64) = (1920.0, 1080.0);
+static RES: (f64, f64) = (640.0, 480.0);
 
 pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
@@ -866,15 +866,17 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
     cam.set(4, RES.1)?;
     let _ = videoio::VideoCapture::is_opened(&cam)?;
     let family: Family = Family::tag_16h5();
-    let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
     let _ = cam.set(
         videoio::CAP_PROP_FOURCC,
         videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
             .unwrap()
             .into(),
     );
-    let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
-    // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
+    let _ = cam.set(
+        videoio::CAP_PROP_XI_EXPOSURE,
+        25000.0,
+    );
+    // let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
     let mut detector = DetectorBuilder::new()
         .add_family_bits(family, 1)
         .build()
@@ -887,7 +889,6 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
         let frame_time = Instant::now();
         let mut frame = Mat::default();
         if cam.read(&mut frame).is_err() {
-            thread::sleep(Duration::from_millis(50));
             if let Ok(mut v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
                 // let _ = v.set(videoio::CAP_PROP_EXPOSURE, -10.0);
                 let _ = v.set(videoio::CAP_PROP_FPS, 60.0);
@@ -896,6 +897,10 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, RES.0);
             let _ = cam.set(4, RES.1);
+            let _ = cam.set(
+                videoio::CAP_PROP_XI_EXPOSURE,
+                2500.0,
+            );
             // let _ = cam.set(videoio::CAP_PROP_EXPOSURE, -10.0);
             let _ = cam.set(
                 videoio::CAP_PROP_FOURCC,
@@ -904,7 +909,7 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
                     .into(),
             );
             let _ = cam.set(videoio::CAP_PROP_FPS, 60.0);
-            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
+            // let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         }
@@ -934,13 +939,17 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
             let _ = cam.set(3, RES.0);
             let _ = cam.set(
+                videoio::CAP_PROP_XI_EXPOSURE,
+                25000.0,
+            );
+            let _ = cam.set(
                 videoio::CAP_PROP_FOURCC,
                 videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
                     .unwrap()
                     .into(),
             );
             let _ = cam.set(4, RES.1);
-            let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
+            // let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
             let _ = videoio::VideoCapture::is_opened(&cam);
             continue;
         };
@@ -1043,6 +1052,13 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
     let mut cam = videoio::VideoCapture::new(cam_index, videoio::CAP_ANY)?;
     cam.set(3, RES.0)?;
     cam.set(4, RES.1)?;
+    let _ = cam.set(
+        videoio::CAP_PROP_FOURCC,
+        videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
+            .unwrap()
+            .into(),
+    );
+    let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
     let _ = videoio::VideoCapture::is_opened(&cam)?;
     let family: Family = Family::tag_16h5();
     // let tag_params: Option<TagParams> = tag_params.map(|params| params.into());
@@ -1065,6 +1081,13 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
                 if let Ok(v) = videoio::VideoCapture::new(0, videoio::CAP_ANY) {
                     cam = v;
                 }
+                let _ = cam.set(
+                    videoio::CAP_PROP_FOURCC,
+                    videoio::VideoWriter::fourcc('M', 'J', 'P', 'G')
+                        .unwrap()
+                        .into(),
+                );
+                let _ = cam.set(videoio::CAP_OPENCV_MJPEG, 1.0);
                 let _ = highgui::named_window(&format!("seancv{cam_index}"), 1);
                 let _ = cam.set(3, RES.0);
                 let _ = cam.set(4, RES.1);

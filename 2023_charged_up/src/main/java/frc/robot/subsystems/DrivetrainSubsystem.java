@@ -11,18 +11,27 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.SparkMaxAlternateEncoder;
 
+import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveOdometry;
+import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.drive.MecanumDrive;
+import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.Constants;
+
+
+
 
 public class DrivetrainSubsystem extends SubsystemBase {  /**
    *
@@ -30,36 +39,34 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    */
   
   public void initDefaultCommand() {}
-  private static final MotorType kMotorType = MotorType.kBrushless;
-  private static final SparkMaxAlternateEncoder.Type kAltEncType = SparkMaxAlternateEncoder.Type.kQuadrature;
-  private static final int kCPR = 8192;
-
-
-  public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput;
   private double gyro_offset = 0;
   /*
   Initialize drivebase motors from constants
   // */
-  CANSparkMax leftFront = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax leftFront = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   // Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
   // Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
   // Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
   // Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
 
-  // Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
-  // Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
-  // Translation2d backLeftLocation = new Translation2d(0.2286, -0.2286);
-  // Translation2d backRightLocation = new Translation2d(-0.2286, -0.2286);
+  static Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
+  static Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
+  static Translation2d backLeftLocation = new Translation2d(0.2286, -0.2286);
+  static Translation2d backRightLocation = new Translation2d(-0.2286, -0.2286);
+  public static MecanumDriveKinematics m_drivetrain = new MecanumDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
+
+  public static MecanumDrive drive = new MecanumDrive((MotorController) DrivetrainSubsystem.leftFront, (MotorController) DrivetrainSubsystem.leftBack, (MotorController) DrivetrainSubsystem.rightFront, (MotorController) DrivetrainSubsystem.rightBack);
+
 
   
   // encoder constant to convert encoder ticks from hall effect sensor in Neos to meters traveled
   // double encoderConstant = (1 / 10.75) * 0.15 * Math.PI;
   // rotation / meter * 2048
   // 1 / 2 * Math.PI * outer diameter
-  double encoderConstant = (1 / 10.75) * 0.15 * Math.PI;
+  double encoderConstant = (1 / 8.571428571) * 0.2032 * Math.PI;
 
   // add entry to network table to put robot X and Y values from odometry
   NetworkTableEntry m_xEntry = NetworkTableInstance.getDefault().getTable("troubleshooting").getEntry("X");
@@ -69,15 +76,14 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   Field2d field = new Field2d();
 
   // create a drivetrain from the leftBack and rightFront motors
-  // MecanumDriveKinematics m_drivetrain = new MecanumDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
-
+  
   // initialize gyro
   private final ADIS16470_IMU gyro = new ADIS16470_IMU();
 
   private final double curve_b = 0.1;
   
   // create odometry object to keep track of robot position
-  MecanumDriveOdometry m_odometry;
+  static MecanumDriveOdometry m_odometry;
 
 
   public DrivetrainSubsystem() {
@@ -99,40 +105,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    * @return heading of gyro in degrees
    */
   public double getHeading() {
-    // return gyro.getRotation2d().getDegrees();
-    return 0;
+    return gyro.getAngle();
   }
-
-  /**
-   * Get the encoder distance measured on the left
-   * @return Distance traveled by the left encoder (meters)
-   */
-  // public double getLeftDistance(){
-    // return leftBack.getAlternateEncoder(kAltEncType, kCPR).getPosition();
-  // }
-
-  /**
-   * Get the encoder distance measured on the right
-   * @return Distance traveled by the right encoder (meters)
-   */
-  // public double getRightDistance(){
-  //   return rightFront.getAlternateEncoder(kAltEncType, kCPR).getPosition();
-  // }
-  // /**
-  //  * Get the current velocity of the left wheel
-  //  * @return current velocity of the left wheel
-  //  */
-  // public double getLeftVelocity(){
-  //   return leftBack.getEncoder().getVelocity();
-  // }
-
-  // /**
-  //  * Get the current velocity of the right wheel
-  //  * @return current velocity of the right wheel
-  //  */
-  // public double getRightVelocity(){
-  //   return rightFront.getEncoder().getVelocity();
-  // }
 
   public double curve(double v, boolean turbo) {
     var negative = v < 0.0;
@@ -143,7 +117,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     return negative ? -c: c;
   }
 
-  public final double dead_zone = 0.065;
+  public final double dead_zone = 0.08;
 
   public double clamp(double v, double l, double u) {
     if (v > u) {
@@ -157,10 +131,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
   @Override
   public void periodic() {
-    // SmartDashboard.putData("leftFront", (Sendable) leftFront.getPIDController());
-    // SmartDashboard.putData("leftBack", (Sendable) leftBack.getPIDController());
-    // SmartDashboard.putData("rightFront", (Sendable) rightFront.getPIDController());
-    // SmartDashboard.putData("rightBack", (Sendable) rightBack.getPIDController());
     rightFront.setInverted(true);
     rightBack.setInverted(true);
     
@@ -169,7 +139,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     //   leftBack.getEncoder().getPosition(), rightBack.getEncoder().getPosition());
 
     // // Get the rotation of the robot from the gyro.
-    // var gyroAngle = gyro.getRotation2d();
+    var gyroAngle = gyro.getAngle();
 
     // Update the pose
     double y = -RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
@@ -184,13 +154,17 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     if (rx < dead_zone && rx > -dead_zone) {
       rx = 0;
     }
-    x *= Math.sqrt(2);
     rx *= 0.5;
 
-    double multiplier = 0.5;
+    double multiplier = 0.2;
     if (RobotContainer.oi.driver.getLeftStickButton()) {
       multiplier = 1;
     }
+    
+    if (multiplier != 1) {
+      x /= Math.sqrt(2);
+    }
+
 
      double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
      double frontLeftPower = (y + x + rx) / denominator;
@@ -202,7 +176,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
     rightBack.set(clamp(curve(PID.motor_3 * backRightPower * multiplier, multiplier == 1), -1, 1));
     leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
-
+    
     // double corrected_heading = gyro.getAngle();
     // boolean negative = corrected_heading < 0;
     // corrected_heading = Math.abs(corrected_heading);
@@ -216,6 +190,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     //   gyro_offset = botHeading;
     // }
     // botHeading -= gyro_offset;
+    // m_odometry.update(new Rotation2d(botHeading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
 
     // double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
     // double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
@@ -236,7 +211,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    * Gets the current pose (2d position + heading) of the robot
    * @return current pose of the robot (meters)
    */
-  public Pose2d getPose() {
+  public static Pose2d getPose() {
     return m_odometry.getPoseMeters();
   }
   
