@@ -14,6 +14,7 @@ public class Vision extends SubsystemBase {
     public double z;
     public double tag_translation_range;
     public double tag_rotation_range;
+    // this entry is u128 in rust but gets converted to long via a string value
     public long frame_time;
     // ms
     public static final long max_time_epsilon = 250;

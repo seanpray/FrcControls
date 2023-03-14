@@ -139,7 +139,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     //   leftBack.getEncoder().getPosition(), rightBack.getEncoder().getPosition());
 
     // // Get the rotation of the robot from the gyro.
-    var gyroAngle = gyro.getAngle();
+    // var gyroAngle = gyro.getAngle();
+    // System.out.println(gyroAngle);
 
     // Update the pose
     double y = -RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
@@ -164,47 +165,50 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     if (multiplier != 1) {
       x /= Math.sqrt(2);
     }
+   
 
 
-     double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-     double frontLeftPower = (y + x + rx) / denominator;
-     double backLeftPower = (y - x + rx) / denominator;
-     double frontRightPower = (y - x - rx) / denominator;
-     double backRightPower = (y + x - rx) / denominator;
-
-    leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
-    rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
-    rightBack.set(clamp(curve(PID.motor_3 * backRightPower * multiplier, multiplier == 1), -1, 1));
-    leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
-    
-    // double corrected_heading = gyro.getAngle();
-    // boolean negative = corrected_heading < 0;
-    // corrected_heading = Math.abs(corrected_heading);
-    // double reference = corrected_heading % 360;
-    // if (negative) {
-    //   reference = -reference;
-    // }
-
-    // double botHeading = reference * Math.PI / 180.0;
-    // if (RobotContainer.oi.driver.getBButton()) {
-    //   gyro_offset = botHeading;
-    // }
-    // botHeading -= gyro_offset;
-    // m_odometry.update(new Rotation2d(botHeading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
-
-    // double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-    // double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-    // double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-    // double frontLeftPower = (rotY + rotX + rx) / denominator;
-    // double backLeftPower = (rotY - rotX + rx) / denominator;
-    // double frontRightPower = (rotY - rotX - rx) / denominator;
-    // double backRightPower = (rotY + rotX - rx) / denominator;
+    //  double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
+    //  double frontLeftPower = (y + x + rx) / denominator;
+    //  double backLeftPower = (y - x + rx) / denominator;
+    //  double frontRightPower = (y - x - rx) / denominator;
+    //  double backRightPower = (y + x - rx) / denominator;
 
     // leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
-    // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
     // rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
-    // rightBack.set(clamp(curve(PID.motor_4 * backRightPower * multiplier, multiplier == 1), -1, 1));
+    // rightBack.set(clamp(curve(PID.motor_3 * backRightPower * multiplier, multiplier == 1), -1, 1));
+    // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
+    
+    double corrected_heading = gyro.getAngle();
+    System.out.println(gyro.get)
+    System.out.println(corrected_heading);
+    boolean negative = corrected_heading < 0;
+    corrected_heading = Math.abs(corrected_heading);
+    double reference = corrected_heading % 360;
+    if (negative) {
+      reference = -reference;
+    }
+
+    double botHeading = reference * Math.PI / 180.0;
+    if (RobotContainer.oi.driver.getBButton()) {
+      gyro_offset = botHeading;
+    }
+    botHeading -= gyro_offset;
+    // m_odometry.update(new Rotation2d(reference), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
+
+    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
+
+    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+    double frontLeftPower = (rotY + rotX + rx) / denominator;
+    double backLeftPower = (rotY - rotX + rx) / denominator;
+    double frontRightPower = (rotY - rotX - rx) / denominator;
+    double backRightPower = (rotY + rotX - rx) / denominator;
+
+    leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
+    leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
+    rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
+    rightBack.set(clamp(curve(PID.motor_4 * backRightPower * multiplier, multiplier == 1), -1, 1));
   }
 
   /**

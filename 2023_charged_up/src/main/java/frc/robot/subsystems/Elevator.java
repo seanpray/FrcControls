@@ -16,6 +16,8 @@ enum ElevatorLevel {
     Low,
     // medium goal
     Medium,
+    // turn off PID
+    Idle,
 }
 
 public class Elevator extends SubsystemBase {
@@ -28,14 +30,17 @@ public class Elevator extends SubsystemBase {
     
     private SparkMaxPIDController spoolPID = spoolNeo.getPIDController();
 
-    ElevatorLevel targetState = ElevatorLevel.GrabCone;
+    public ElevatorLevel targetState = ElevatorLevel.GrabCone;
 
+    public void set_target(ElevatorLevel target) {
+        targetState = target;
+    }
 
     public Elevator() {
         spoolEncoder.setPosition(0);
         spoolNeo.restoreFactoryDefaults();
-
-        spoolNeo.getEncoder().setPositionConversionFactor(18);
+        // 4PI per a rotation, 12:96 pinion: gear, 96/12 -> 96/12 * 4 * PI
+        spoolNeo.getEncoder().setPositionConversionFactor(8 * 4 * Math.PI);
         spoolPID.setFeedbackDevice(spoolEncoder);
 
         // PID coefficients
@@ -66,7 +71,9 @@ public class Elevator extends SubsystemBase {
 
     }
 
-
+    public void resetOutputRange() {
+        spoolPID.setOutputRange(kMinOutput, kMaxOutput); 
+    }
     @Override
     public void periodic() {
         
@@ -78,6 +85,9 @@ public class Elevator extends SubsystemBase {
         double ff = SmartDashboard.getNumber("Elevator Feed Forward", 0);
         double max = SmartDashboard.getNumber("Elevator Max Output", 0);
         double min = SmartDashboard.getNumber("Elevator Min Output", 0);
+        if (elevatorTopLimit.get()) {
+            // active
+        }
         
         // if PID coefficients on SmartDashboard have changed, write new values to controller
         // if((p != kP)) { spoolPID.setP(p); kP = p; }
@@ -96,6 +106,24 @@ public class Elevator extends SubsystemBase {
         // } else {
         //     rotateNeo.set(0);
         // }
+        // reference input is inches, I think
+        switch (targetState) {
+            case GrabCone:
+                resetOutputRange();
+                spoolPID.setReference(0, CANSparkMax.ControlType.kPosition);
+                break;
+            case Low:
+                resetOutputRange();
+                spoolPID.setReference(4, CANSparkMax.ControlType.kPosition);
+                break;
+            case Medium:
+                resetOutputRange();
+                spoolPID.setReference(5, CANSparkMax.ControlType.kPosition);
+                break;
+            default:
+                spoolPID.setOutputRange(0, 0);
+                break;
+        }
     }
 
 }

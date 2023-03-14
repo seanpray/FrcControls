@@ -21,7 +21,7 @@ public class Intake extends SubsystemBase {
 
     private SparkMaxPIDController rotatePID = rotateNeo.getPIDController();
 
-    DoubleSolenoid climbSolenoid = new DoubleSolenoid(10, PneumaticsModuleType.REVPH, 0, 1);
+    DoubleSolenoid climbSolenoid = new DoubleSolenoid(10, PneumaticsModuleType.REVPH, 15, 13);
     boolean extended = false;
     boolean compressor_status = false;
     // true is down
@@ -41,12 +41,12 @@ public class Intake extends SubsystemBase {
 
         // PID coefficients
         kP = 0.001; 
-        kI = 0.0001;
+        kI = 0.0000001;
         kD = 0.000001; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.1; 
-        kMinOutput = -0.1;
+        kMaxOutput = 0.4; 
+        kMinOutput = -0.4;
 
         maxVel = 50; // rpm
         maxAcc = 10;
@@ -109,7 +109,8 @@ public class Intake extends SubsystemBase {
         //     rotatePID.setOutputRange(min, max); 
         // kMinOutput = min; kMaxOutput = max; 
         // }
-        rotatePID.setFeedbackDevice(rotateEncoder);
+        System.out.println(rotateEncoder);
+        // rotatePID.setFeedbackDevice(rotateEncoder);
         // System.out.println(flipped);
         if (flipped) {
             rotatePID.setReference(-80, CANSparkMax.ControlType.kPosition);

@@ -130,6 +130,13 @@ impl NetworkTableEntries {
                 .as_millis(),
         }
     }
+    pub fn publish_changes(&self) {
+         let rt  = Runtime::new().unwrap();
+        rt.block_on(async {
+            loop {
+        let t = timeout(Duration::from_millis(500), NetworkTables::connect(&(IP.lock().unwrap()), "vision")).await;
+            }})
+    }
 }
 
 pub enum OP {
@@ -695,6 +702,53 @@ fn quaternion_to_rotation(q: Quaternion) -> Rotation {
         pitch: atan(2.0 * (q.Y * q.W - q.Z * q.X)),
     }
 }
+/*
+
+            let pose = det.estimate_tag_pose(&TagParams {
+                tagsize: 0.152,
+                fx: 578.272,
+                fy: 578.272,
+                cx: 402.145,
+                cy: 221.506,
+            });
+ */
+
+// NOTE: this calibration is for the C920 webcam at 800x448.
+pub struct CameraMatrix {
+    fx: f64,
+    fy: f64,
+    cx: f64,
+    cy: f64,
+    x: f64,
+    y: f64
+}
+
+impl Default for CameraMatrix {
+    fn default() -> Self {
+        Self {
+            fx: 578.272,
+            fy: 578.272,
+            // origin of focal plane
+            cx: 402.145,
+            cy: 221.506,
+            x: 800.0,
+            y: 448.0,
+        }
+    }
+}
+
+// https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+
+impl CameraMatrix {
+    pub fn scaled(x: f64, y: f64) -> Self {
+        let default = Self::default();
+        Self {
+            fx: default.fx * (x / default.x),
+            fy: default.fy * (y / default.y),
+            ..default
+        }
+    }
+}
 
 static G_ACCEL: f64 = 9.80665;
 
@@ -814,12 +868,13 @@ pub fn detect_loop_multithreaded(cam_index: i32, threads: usize) -> Result<()> {
                 if det.decision_margin() < 40.0 {
                     continue;
                 }
+                let c = CameraMatrix::scaled(RES.0, RES.1);
                 let pose = det.estimate_tag_pose(&TagParams {
                     tagsize: 0.152,
-                    fx: 578.272,
-                    fy: 578.272,
-                    cx: 402.145,
-                    cy: 221.506,
+                    fx: c.fx,
+                    fy: c.fy,
+                    cx: c.cx,
+                    cy: c.cy,
                 });
                 // println!("  - pose {}: {:#?}", index, pose);
                 if let Some(pose) = pose {
@@ -967,6 +1022,15 @@ pub fn detect_loop_single(cam_index: i32) -> Result<()> {
             if det.decision_margin() < 40.0 {
                 continue;
             }
+            let c = CameraMatrix::scaled(RES.0, RES.1);
+            let pose = det.estimate_tag_pose(&TagParams {
+                tagsize: 0.152,
+                fx: c.fx,
+                fy: c.fy,
+                cx: c.cx,
+                cy: c.cy,
+            });
+
             let pose = det.estimate_tag_pose(&TagParams {
                 tagsize: 0.152,
                 fx: 578.272,
@@ -1125,12 +1189,13 @@ pub fn detect_loop_hybrid(cam_index: i32) -> Result<()> {
             if det.decision_margin() < 40.0 {
                 continue;
             }
+            let c = CameraMatrix::scaled(RES.0, RES.1);
             let pose = det.estimate_tag_pose(&TagParams {
                 tagsize: 0.152,
-                fx: 578.272,
-                fy: 578.272,
-                cx: 402.145,
-                cy: 221.506,
+                fx: c.fx,
+                fy: c.fy,
+                cx: c.cx,
+                cy: c.cy,
             });
             // println!("  - pose {}: {:#?}", index, pose);
             if let Some(pose) = pose {
