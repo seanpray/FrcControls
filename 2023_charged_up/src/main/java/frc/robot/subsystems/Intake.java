@@ -36,21 +36,20 @@ public class Intake extends SubsystemBase {
         climbSolenoid.set(DoubleSolenoid.Value.kForward);
         // in degrees, 1 neo rotation is 18 degrees of intake rotation
         rotateNeo.getEncoder().setPositionConversionFactor(18);
-        rotatePID.setFeedbackDevice(rotateEncoder);
         compressor.enableDigital();
         compressor_status = true;
 
         // PID coefficients
         kP = 0.001; 
-        kI = 0.001;
-        kD = 0.001; 
+        kI = 0.0001;
+        kD = 0.000001; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.2; 
-        kMinOutput = -0.2;
+        kMaxOutput = 0.1; 
+        kMinOutput = -0.1;
 
-        maxVel = 100; // rpm
-        maxAcc = 50;
+        maxVel = 50; // rpm
+        maxAcc = 10;
 
         int smartMotionSlot = 0;
         rotatePID.setSmartMotionMaxVelocity(maxVel, smartMotionSlot);
@@ -106,21 +105,21 @@ public class Intake extends SubsystemBase {
         // if((d != kD)) { rotatePID.setD(d); kD = d; }
         // if((iz != kIz)) { rotatePID.setIZone(iz); kIz = iz; }
         // if((ff != kFF)) { rotatePID.setFF(ff); kFF = ff; }
-        // if((max != kMaxOutput) || (min != kMinOutput)) { 
+        // if((max != kMaxOutput) || (min != kMin6Output)) { 
         //     rotatePID.setOutputRange(min, max); 
         // kMinOutput = min; kMaxOutput = max; 
         // }
-        // if (flipped) {
-        //     // rotateNeo.set(-0.3);
-        //     rotatePID.setReference(90, CANSparkMax.ControlType.kPosition);
-        // } else if (!flipped) {
-        //     // rotateNeo.set(0.3);
-        //     rotatePID.setReference(0, CANSparkMax.ControlType.kPosition);
-        // } else {
-        //     rotateNeo.set(0);
-        // }
+        rotatePID.setFeedbackDevice(rotateEncoder);
+        // System.out.println(flipped);
+        if (flipped) {
+            rotatePID.setReference(-80, CANSparkMax.ControlType.kPosition);
+        } else if (!flipped) {
+            rotatePID.setReference(0, CANSparkMax.ControlType.kPosition);
+        } else {
+            rotateNeo.set(0);
+        }
     
-        System.out.println(rotateNeo.getEncoder().getPosition());
+        // System.out.println(rotateNeo.getEncoder().getPosition());
         intakeNeo.set(0);
     }
 

@@ -78,7 +78,7 @@ public class RobotContainer {
     new JoystickButton(oi.driver, 6)
       .whileActiveContinuous(new InstantCommand(intake::run_intake_out));
     new JoystickButton(oi.driver, 5)
-      .whileActiveContinuous(new InstantCommand(intake::flip_intake));
+      .toggleWhenPressed(new InstantCommand(intake::flip_intake));
     // new JoystickButton(oi.driver, 6)
     //   .whileActiveContinuous(new InstantCommand(intake::toggle));
     
