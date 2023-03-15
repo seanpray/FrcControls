@@ -7,9 +7,7 @@
 
 package frc.robot.subsystems;
 
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.SparkMaxAlternateEncoder;
 
 import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -22,6 +20,7 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -29,9 +28,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.Constants;
-
-
-
+import edu.wpi.first.wpilibj.CounterBase;
 
 public class DrivetrainSubsystem extends SubsystemBase {  /**
    *
@@ -47,10 +44,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   public static CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   public static CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   public static CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  // Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
-  // Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
-  // Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
-  // Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
+  Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
+  Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
+  Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
+  Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
 
   static Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
   static Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
@@ -87,6 +84,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
 
   public DrivetrainSubsystem() {
+    gyro.configCalTime(edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime._256ms);
     // restores factory defaults on Spark MAX motor controllers and sets encoder positions to 0
     leftFront.restoreFactoryDefaults();
     leftBack.restoreFactoryDefaults();
@@ -108,18 +106,18 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     return gyro.getAngle();
   }
 
-  public double curve(double v, boolean turbo) {
+  public final double dead_zone = 0.08;
+
+   // can think of curve_b as shifting down so the graph so it starts at 0, basically applies a deadzone
+  public static double curveInput(double v, boolean turbo, double curve_b) {
     var negative = v < 0.0;
     var c = (Math.sqrt(Math.abs(v)) - curve_b);
     if (c < 0) {
-      c = 0;
+        c = 0;
     }
     return negative ? -c: c;
   }
-
-  public final double dead_zone = 0.08;
-
-  public double clamp(double v, double l, double u) {
+  public static double clamp(double v, double l, double u) {
     if (v > u) {
       return u;
     } else if (v < l) {
@@ -179,9 +177,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     // rightBack.set(clamp(curve(PID.motor_3 * backRightPower * multiplier, multiplier == 1), -1, 1));
     // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
     
-    double corrected_heading = gyro.getAngle();
-    System.out.println(gyro.get)
-    System.out.println(corrected_heading);
+    // double corrected_heading = gyro.getAngle();
+    double corrected_heading = gyro.getXComplementaryAngle();
     boolean negative = corrected_heading < 0;
     corrected_heading = Math.abs(corrected_heading);
     double reference = corrected_heading % 360;
@@ -194,7 +191,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
       gyro_offset = botHeading;
     }
     botHeading -= gyro_offset;
-    // m_odometry.update(new Rotation2d(reference), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
+    m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
 
     double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
     double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
@@ -205,10 +202,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double frontRightPower = (rotY - rotX - rx) / denominator;
     double backRightPower = (rotY + rotX - rx) / denominator;
 
-    leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
-    leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
-    rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
-    rightBack.set(clamp(curve(PID.motor_4 * backRightPower * multiplier, multiplier == 1), -1, 1));
+    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
   }
 
   /**

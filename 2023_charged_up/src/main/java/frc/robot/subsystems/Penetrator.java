@@ -12,10 +12,16 @@ public class Penetrator extends SubsystemBase {
     }   
 
     public void increase_angle() {
-        setting += 0.1;
+        if (setting < 1) {
+            setting += 0.005;
+        }
+        
     }
     public void decrease_angle() {
-        setting -= 0.1;
+        if (setting > 0) {
+            setting -= 0.005;
+        }
+        
     }
 
     @Override

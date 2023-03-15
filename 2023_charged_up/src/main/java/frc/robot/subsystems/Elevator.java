@@ -24,33 +24,42 @@ public class Elevator extends SubsystemBase {
     public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput, maxVel, maxAcc, minVel, allowedErr;
     DigitalInput elevatorTopLimit = new DigitalInput(4);
 
+    public boolean toggle_up = false;
+
     // positive power goes 
-    CANSparkMax spoolNeo = new CANSparkMax(Constants.intake_rotate, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-    RelativeEncoder spoolEncoder = spoolNeo.getEncoder();
+    CANSparkMax spoolNeo = new CANSparkMax(Constants.elevator_neo, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+    RelativeEncoder spoolEncoder;
     
-    private SparkMaxPIDController spoolPID = spoolNeo.getPIDController();
+    private SparkMaxPIDController spoolPID;
 
     public ElevatorLevel targetState = ElevatorLevel.GrabCone;
+
 
     public void set_target(ElevatorLevel target) {
         targetState = target;
     }
 
+    public void toggle_elevator() {
+        toggle_up = !toggle_up;
+    }
+
     public Elevator() {
+        spoolEncoder = spoolNeo.getEncoder();
         spoolEncoder.setPosition(0);
+        spoolPID = spoolNeo.getPIDController();
         spoolNeo.restoreFactoryDefaults();
         // 4PI per a rotation, 12:96 pinion: gear, 96/12 -> 96/12 * 4 * PI
-        spoolNeo.getEncoder().setPositionConversionFactor(8 * 4 * Math.PI);
+        spoolNeo.getEncoder().setPositionConversionFactor(0.125 * 4 * Math.PI);
         spoolPID.setFeedbackDevice(spoolEncoder);
 
         // PID coefficients
-        kP = 0.001; 
+        kP = 0.01; 
         kI = 0.0001;
         kD = 0; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.1; 
-        kMinOutput = -0.1;
+        kMaxOutput = 0.2; 
+        kMinOutput = -0.2;
 
         maxVel = 50; // rpm
         maxAcc = 10;
@@ -78,15 +87,21 @@ public class Elevator extends SubsystemBase {
     public void periodic() {
         
          // read PID coefficients from SmartDashboard
-        double p = SmartDashboard.getNumber("Elevator P Gain", 0);
-        double i = SmartDashboard.getNumber("Elevator I Gain", 0);
-        double d = SmartDashboard.getNumber("Elevator D Gain", 0);
-        double iz = SmartDashboard.getNumber("Elevator I Zone", 0);
-        double ff = SmartDashboard.getNumber("Elevator Feed Forward", 0);
-        double max = SmartDashboard.getNumber("Elevator Max Output", 0);
-        double min = SmartDashboard.getNumber("Elevator Min Output", 0);
-        if (elevatorTopLimit.get()) {
-            // active
+        // double p = SmartDashboard.getNumber("Elevator P Gain", 0);
+        // double i = SmartDashboard.getNumber("Elevator I Gain", 0);
+        // double d = SmartDashboard.getNumber("Elevator D Gain", 0);
+        // double iz = SmartDashboard.getNumber("Elevator I Zone", 0);
+        // double ff = SmartDashboard.getNumber("Elevator Feed Forward", 0);
+        // double max = SmartDashboard.getNumber("Elevator Max Output", 0);
+        // double min = SmartDashboard.getNumber("Elevator Min Output", 0);
+        // if (elevatorTopLimit.get()) {
+        //     // active
+        // }
+        System.out.println(spoolEncoder.getPosition());
+        if (toggle_up) {
+            spoolPID.setReference(40, CANSparkMax.ControlType.kPosition);
+        } else {
+            spoolNeo.set(0);
         }
         
         // if PID coefficients on SmartDashboard have changed, write new values to controller
@@ -107,23 +122,27 @@ public class Elevator extends SubsystemBase {
         //     rotateNeo.set(0);
         // }
         // reference input is inches, I think
-        switch (targetState) {
-            case GrabCone:
-                resetOutputRange();
-                spoolPID.setReference(0, CANSparkMax.ControlType.kPosition);
-                break;
-            case Low:
-                resetOutputRange();
-                spoolPID.setReference(4, CANSparkMax.ControlType.kPosition);
-                break;
-            case Medium:
-                resetOutputRange();
-                spoolPID.setReference(5, CANSparkMax.ControlType.kPosition);
-                break;
-            default:
-                spoolPID.setOutputRange(0, 0);
-                break;
-        }
+        // switch (targetState) {
+        //     case GrabCone:
+        //         resetOutputRange();
+        //         spoolPID.setReference(0, CANSparkMax.ControlType.kPosition);
+        //         break;
+        //     case Low:
+        //         resetOutputRange();
+        //         spoolPID.setReference(4, CANSparkMax.ControlType.kPosition);
+        //         break;
+        //     case Medium:
+        //         resetOutputRange();
+        //         spoolPID.setReference(5, CANSparkMax.ControlType.kPosition);
+        //         break;
+        //     default:
+        //         spoolPID.setOutputRange(0, 0);
+        //         break;
+        // }
+        // System.out.println(spoolEncoder.getPosition());
+        // if (targetState == ElevatorLevel.Medium && elevatorTopLimit.get()) {
+            // spoolEncoder.setPosition(min)
+        // }
     }
 
 }

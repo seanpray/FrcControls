@@ -18,16 +18,21 @@ public final class Constants {
 
     
     // Drivebase motor controller index values
+    // CAN
     public final static int l1 = 1;
     public final static int l2 = 4;
     public final static int r1 = 2;
     public final static int r2 = 3;
 
+    // CAN
     public final static int elevator_neo = 5;
     public final static int intake_rotate = 6;
     public final static int intake_intake = 7;
     public final static int fourbar_neo = 8;
-    public final static int bj_neo = 9;
+    // pwm
+    public final static int bj_servo = 9;
+    // DIO
+    public final static int elevator_limit_switch = 8;
 
     // Flywheel and intake motor controller index values
     public final static int Flywheel = 1;
@@ -79,26 +84,26 @@ public final class Constants {
 	 * 0,1,2 or 3. Only the first two (0,1) are visible in web-based
 	 * configuration.
 	 */
-	public static final int kSlotIdx = 0;
+	// public static final int kSlotIdx = 0;
 
 	/**
 	 * Talon FX supports multiple (cascaded) PID loops. For
 	 * now we just want the primary one.
 	 */
-	public static final int kPIDLoopIdx = 0;
+	// public static final int kPIDLoopIdx = 0;
 
 	/**
 	 * Set to zero to skip waiting for confirmation, set to nonzero to wait and
 	 * report to DS if action fails.
 	 */
-    public static final int kTimeoutMs = 30;
+    // public static final int kTimeoutMs = 30;
 
 	/**
 	 * PID Gains may have to be adjusted based on the responsiveness of control loop.
      * kF: 1023 represents output value to Talon at 100%, 20660 represents Velocity units at 100% output
      * 
 	 * 	                                    			  kP   	 kI    kD      kF          Iz    PeakOut */
-   public final static Gains kGains_Velocit  = new Gains( 0.1, 0.001, 5, 1023.0/20660.0,  300,  1.00);
+  //  public final static Gains kGains_Velocit  = new Gains( 0.1, 0.001, 5, 1023.0/20660.0,  300,  1.00);
 
 
    // ADJUST THESE VALUES FOR OUR ROBOT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
