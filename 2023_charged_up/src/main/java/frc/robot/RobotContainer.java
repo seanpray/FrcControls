@@ -30,6 +30,7 @@ import frc.robot.subsystems.DrivetrainSubsystem;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Penetrator;
 import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.FourBar;
 
 
 /**
@@ -47,6 +48,7 @@ public class RobotContainer {
     public final static DrivetrainSubsystem drivetrain = new DrivetrainSubsystem();
 
     public final static Intake intake = new Intake();
+    public final static FourBar fourbar = new FourBar();
 
     public final static Penetrator penetrator = new Penetrator();
     public final static Elevator elevator = new Elevator();
@@ -83,17 +85,17 @@ public class RobotContainer {
     // new JoystickButton(oi.driver, 5)
     //   .whileActiveContinuous(new InstantCommand(intake::run_intake_in));
     // servo in out
-    // new JoystickButton(oi.driver, 2)
-    //   .whileActiveContinuous(new InstantCommand(penetrator::increase_angle));
-    // new JoystickButton(oi.driver, 3)
-    //   .whileActiveContinuous(new InstantCommand(penetrator::decrease_angle));
+    new JoystickButton(oi.driver, 2)
+      .whileActiveContinuous(new InstantCommand(penetrator::increase_angle));
+    new JoystickButton(oi.driver, 3)
+      .whileActiveContinuous(new InstantCommand(penetrator::decrease_angle));
     // new JoystickButton(oi.driver, 4)
       // .whileActiveContinuous(new InstantCommand(intake::run_intake_out));
       
     new JoystickButton(oi.driver, 5)
       .toggleWhenPressed(new InstantCommand(intake::flip_intake));
     new JoystickButton(oi.driver, 6)
-      .toggleWhenPressed(new InstantCommand(elevator::toggle_elevator));
+      .toggleWhenPressed(new InstantCommand(fourbar::toggleExtend));
     // new JoystickButton(oi.driver, 6)
     //   .whileActiveContinuous(new InstantCommand(intake::toggle));
     

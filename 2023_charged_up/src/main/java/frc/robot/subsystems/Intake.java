@@ -7,9 +7,13 @@ import com.revrobotics.SparkMaxPIDController;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.RobotState;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.RobotContainer;
 
 public class Intake extends SubsystemBase {
     public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput, maxVel, maxAcc, minVel, allowedErr;
@@ -18,25 +22,36 @@ public class Intake extends SubsystemBase {
     CANSparkMax rotateNeo = new CANSparkMax(Constants.intake_rotate, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
     private RelativeEncoder rotateEncoder = rotateNeo.getEncoder();
     CANSparkMax intakeNeo = new CANSparkMax(Constants.intake_intake, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-
+    double counter = 0;
     private SparkMaxPIDController rotatePID = rotateNeo.getPIDController();
 
     public boolean scoring = false;
     public double power = 0.5;
 
-    DoubleSolenoid climbSolenoid = new DoubleSolenoid(10, PneumaticsModuleType.REVPH, 15, 13);
+    Timer time = new Timer();
+
+    public boolean up = false;
+
+    DoubleSolenoid climbSolenoid = new DoubleSolenoid(10, PneumaticsModuleType.REVPH, 1, 2);
     boolean extended = false;
     // boolean compressor_status = false;
     // true is down
     boolean flipped = false;
     double initial_position = 0;
-    double angle = 80;
+    double angle = -70;
+    public double previousEncoder = 0;
+    public double stallEpsilon = 3;
+
+     // true if "stalled"
+     public boolean motorEndstop(double motorPower, double encoderValue) {
+        return Math.abs(previousEncoder - encoderValue) > stallEpsilon && Math.abs(motorPower) > 0.1;
+    }
 
     // cone scoring for high goal when pushed against 2x4s, 15 degrees 0.5 power
 
     public Intake() {
+        time.start();
         rotateEncoder.setPosition(0);
-        rotateEncoder.setInverted(true);
         initial_position = rotateEncoder.getPosition();
         rotateNeo.restoreFactoryDefaults();
         intakeNeo.restoreFactoryDefaults();
@@ -50,22 +65,25 @@ public class Intake extends SubsystemBase {
         SmartDashboard.putNumber("power ", power);
 
         // PID coefficients
-        kP = 0.005; 
-        kI = 0.000001;
-        kD = 0.000001; 
+        kP = 0.02; 
+        kI = 0.000035;
+        kD = 0.00033; 
         kIz = 0; 
-        kFF = 0; 
-        kMaxOutput = 0.35; 
-        kMinOutput = -0.35;
+        kFF = 0.00005; 
+        kMaxOutput = 0.4; 
+        kMinOutput = -0.4;
+        SmartDashboard.putNumber("intake kP", kP);
+        SmartDashboard.putNumber("intake kD", kD);
+        SmartDashboard.putNumber("intake kD", kD);
 
-        maxVel = 50; // rpm
-        maxAcc = 10;
+        maxVel = 4; // rpm
+        maxAcc = 2;
 
         int smartMotionSlot = 0;
         rotatePID.setSmartMotionMaxVelocity(maxVel, smartMotionSlot);
         rotatePID.setSmartMotionMinOutputVelocity(minVel, smartMotionSlot);
         rotatePID.setSmartMotionMaxAccel(maxAcc, smartMotionSlot);
-        rotatePID.setSmartMotionAllowedClosedLoopError(allowedErr, smartMotionSlot);
+        rotatePID.setSmartMotionAllowedClosedLoopError(4, smartMotionSlot);
 
 
         rotatePID.setP(kP);
@@ -104,14 +122,19 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
+        double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
+        double intake = outtake > 0.05 ? outtake < 0.1 ? -0.1 : -outtake : RobotContainer.oi.driver.getRightTriggerAxis() > 0.05 ? 1 : 0;
+        if (Math.abs(intake) > 0.05) {
+            intakeNeo.set(intake);
+        } else {
+            intakeNeo.set(0);
+        }
+
+
          // read PID coefficients from SmartDashboard
-        double p = SmartDashboard.getNumber("P Gain", 0);
-        double i = SmartDashboard.getNumber("I Gain", 0);
-        double d = SmartDashboard.getNumber("D Gain", 0);
-        double iz = SmartDashboard.getNumber("I Zone", 0);
-        double ff = SmartDashboard.getNumber("Feed Forward", 0);
-        double max = SmartDashboard.getNumber("Max Output", 0);
-        double min = SmartDashboard.getNumber("Min Output", 0);
+       
+        // double max = SmartDashboard.getNumber("Max Output", 0);
+        // double min = SmartDashboard.getNumber("Min Output", 0);
         angle = SmartDashboard.getNumber("angle ", angle);
         power = SmartDashboard.getNumber("power ", power);
         
@@ -121,7 +144,7 @@ public class Intake extends SubsystemBase {
         // if((d != kD)) { rotatePID.setD(d); kD = d; }
         // if((iz != kIz)) { rotatePID.setIZone(iz); kIz = iz; }
         // if((ff != kFF)) { rotatePID.setFF(ff); kFF = ff; }
-        // if((max != kMaxOutput) || (min != kMin6Output)) { 
+        // if((max != kMaxOutput) || (min != kMinOutput)) { 
         //     rotatePID.setOutputRange(min, max); 
         // kMinOutput = min; kMaxOutput = max; 
         // }
@@ -130,16 +153,18 @@ public class Intake extends SubsystemBase {
         if (flipped) {
             rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
         } else if (!flipped) {
-            rotatePID.setReference(0, CANSparkMax.ControlType.kPosition);
+            rotatePID.setReference(-30, CANSparkMax.ControlType.kPosition);
         } else {
             rotateNeo.set(0);
         }
-        if (scoring) {
-            intakeNeo.set(power);
-        }  else {
-            intakeNeo.set(0);
-        }
-    
+        // if (motorEndstop(rotateNeo.getAppliedOutput(), rotateEncoder.getPosition()) && rotateEncoder.getPosition() > -8) {
+        //     rotateEncoder.setPosition(0);
+        // }
+        // if (scoring) {
+        //     intakeNeo.set(power);
+        // }  else {
+        //     intakeNeo.set(0);
+        // }
         // System.out.println(rotateNeo.getEncoder().getPosition());
         // intakeNeo.set(0);
     }

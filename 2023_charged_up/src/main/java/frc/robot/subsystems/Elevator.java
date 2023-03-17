@@ -6,8 +6,10 @@ import com.revrobotics.SparkMaxPIDController;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.hal.simulation.RoboRioDataJNI;
 import edu.wpi.first.wpilibj.DigitalInput;
 import frc.robot.Constants;
+import frc.robot.RobotContainer;
 
 enum ElevatorLevel {
     // the level in which we can get the cone from the intake into the four bar
@@ -25,6 +27,8 @@ public class Elevator extends SubsystemBase {
     DigitalInput elevatorTopLimit = new DigitalInput(4);
 
     public boolean toggle_up = false;
+
+    public double elevatorTarget = 0;
 
     // positive power goes 
     CANSparkMax spoolNeo = new CANSparkMax(Constants.elevator_neo, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
@@ -53,16 +57,16 @@ public class Elevator extends SubsystemBase {
         spoolPID.setFeedbackDevice(spoolEncoder);
 
         // PID coefficients
-        kP = 0.01; 
-        kI = 0.0001;
+        kP = 0.006; 
+        kI = 0;
         kD = 0; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.2; 
-        kMinOutput = -0.2;
+        kMaxOutput = 0.8; 
+        kMinOutput = -0.8;
 
-        maxVel = 50; // rpm
-        maxAcc = 10;
+        maxVel = 1; // rpm
+        maxAcc = 1;
 
         int smartMotionSlot = 0;
         spoolPID.setSmartMotionMaxVelocity(maxVel, smartMotionSlot);
@@ -85,7 +89,16 @@ public class Elevator extends SubsystemBase {
     }
     @Override
     public void periodic() {
-        
+        if (RobotContainer.oi.driver.getPOV() == 0) {
+            if (elevatorTarget > -52) {
+                elevatorTarget -= 0.8;
+            }
+        } else if (Math.abs(RobotContainer.oi.driver.getPOV() - 180) < 10) {
+            if (elevatorTarget < 40) {
+                elevatorTarget += 0.8;
+            }
+        }
+        // System.out.println(elevatorTarget);
          // read PID coefficients from SmartDashboard
         // double p = SmartDashboard.getNumber("Elevator P Gain", 0);
         // double i = SmartDashboard.getNumber("Elevator I Gain", 0);
@@ -97,12 +110,12 @@ public class Elevator extends SubsystemBase {
         // if (elevatorTopLimit.get()) {
         //     // active
         // }
-        System.out.println(spoolEncoder.getPosition());
-        if (toggle_up) {
-            spoolPID.setReference(40, CANSparkMax.ControlType.kPosition);
-        } else {
-            spoolNeo.set(0);
-        }
+        spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
+        // if (toggle_up) {
+        //     spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
+        // } else {
+        //     // spoolNeo.set(0);
+        // }
         
         // if PID coefficients on SmartDashboard have changed, write new values to controller
         // if((p != kP)) { spoolPID.setP(p); kP = p; }

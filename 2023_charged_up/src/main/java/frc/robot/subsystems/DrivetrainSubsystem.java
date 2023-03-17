@@ -44,10 +44,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   public static CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   public static CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   public static CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
-  Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
-  Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
-  Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
+  // Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
+  // Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
+  // Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
+  // Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
 
   static Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
   static Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
@@ -55,7 +55,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   static Translation2d backRightLocation = new Translation2d(-0.2286, -0.2286);
   public static MecanumDriveKinematics m_drivetrain = new MecanumDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
-  public static MecanumDrive drive = new MecanumDrive((MotorController) DrivetrainSubsystem.leftFront, (MotorController) DrivetrainSubsystem.leftBack, (MotorController) DrivetrainSubsystem.rightFront, (MotorController) DrivetrainSubsystem.rightBack);
+  // public static MecanumDrive drive = new MecanumDrive((MotorController) DrivetrainSubsystem.leftFront, (MotorController) DrivetrainSubsystem.leftBack, (MotorController) DrivetrainSubsystem.rightFront, (MotorController) DrivetrainSubsystem.rightBack);
 
 
   
@@ -84,6 +84,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
 
   public DrivetrainSubsystem() {
+    gyro.setYawAxis(ADIS16470_IMU.IMUAxis.kY);
     gyro.configCalTime(edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime._256ms);
     // restores factory defaults on Spark MAX motor controllers and sets encoder positions to 0
     leftFront.restoreFactoryDefaults();
@@ -178,7 +179,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
     
     // double corrected_heading = gyro.getAngle();
-    double corrected_heading = gyro.getXComplementaryAngle();
+    double corrected_heading = gyro.getAngle();
+    System.out.println("heading" + corrected_heading);
     boolean negative = corrected_heading < 0;
     corrected_heading = Math.abs(corrected_heading);
     double reference = corrected_heading % 360;
@@ -191,7 +193,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
       gyro_offset = botHeading;
     }
     botHeading -= gyro_offset;
-    m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
+    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
 
     double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
     double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);

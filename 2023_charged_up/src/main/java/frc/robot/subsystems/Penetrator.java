@@ -8,25 +8,25 @@ public class Penetrator extends SubsystemBase {
     double setting = 0;
     public Penetrator() {
         //rust < go 
-        clip = new Servo(9);
+        clip = new Servo(0);
     }   
 
     public void increase_angle() {
         if (setting < 1) {
-            setting += 0.005;
+            setting += 0.05;
         }
         
     }
     public void decrease_angle() {
         if (setting > 0) {
-            setting -= 0.005;
+            setting -= 0.05;
         }
         
     }
 
     @Override
     public void periodic() {
-        System.out.println(setting);
+        // System.out.println(setting);
         clip.set(setting);
     }
 }

@@ -26,8 +26,8 @@ public final class Constants {
 
     // CAN
     public final static int elevator_neo = 5;
-    public final static int intake_rotate = 6;
-    public final static int intake_intake = 7;
+    public final static int intake_rotate = 7;
+    public final static int intake_intake = 6;
     public final static int fourbar_neo = 8;
     // pwm
     public final static int bj_servo = 9;

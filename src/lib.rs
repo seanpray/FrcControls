@@ -131,11 +131,7 @@ impl NetworkTableEntries {
         }
     }
     pub fn publish_changes(&self) {
-         let rt  = Runtime::new().unwrap();
-        rt.block_on(async {
-            loop {
-        let t = timeout(Duration::from_millis(500), NetworkTables::connect(&(IP.lock().unwrap()), "vision")).await;
-            }})
+        NetworkTables::connect(&(IP.lock().unwrap()), "vision");
     }
 }
 
