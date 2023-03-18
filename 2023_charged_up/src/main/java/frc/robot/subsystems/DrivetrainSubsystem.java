@@ -9,26 +9,19 @@ package frc.robot.subsystems;
 
 import com.revrobotics.CANSparkMax;
 
-import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveOdometry;
-import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.drive.MecanumDrive;
-import edu.wpi.first.wpilibj.motorcontrol.MotorController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.Constants;
-import edu.wpi.first.wpilibj.CounterBase;
 
 public class DrivetrainSubsystem extends SubsystemBase {  /**
    *
@@ -59,11 +52,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
 
   
-  // encoder constant to convert encoder ticks from hall effect sensor in Neos to meters traveled
-  // double encoderConstant = (1 / 10.75) * 0.15 * Math.PI;
-  // rotation / meter * 2048
-  // 1 / 2 * Math.PI * outer diameter
-  double encoderConstant = (1 / 8.571428571) * 0.2032 * Math.PI;
+  // 12 60 -> 35 60 8 inch mecanum
+  double encoderConstant = (1 / 8.57143) * 8 * Math.PI;
 
   // add entry to network table to put robot X and Y values from odometry
   NetworkTableEntry m_xEntry = NetworkTableInstance.getDefault().getTable("troubleshooting").getEntry("X");
@@ -91,6 +81,12 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     leftBack.restoreFactoryDefaults();
     rightFront.restoreFactoryDefaults();
     rightBack.restoreFactoryDefaults();
+    resetEncoders();
+    leftFront.getEncoder().setPositionConversionFactor(encoderConstant);
+    rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
+    rightBack.getEncoder().setPositionConversionFactor(encoderConstant);
+    leftBack.getEncoder().setPositionConversionFactor(encoderConstant);
+
 
     // Sets the distance per pulse for the encoders to translate from encoder ticks to meters
     // rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
@@ -156,7 +152,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     }
     rx *= 0.5;
 
-    double multiplier = 0.2;
+    double multiplier = 0.5;
     if (RobotContainer.oi.driver.getLeftStickButton()) {
       multiplier = 1;
     }
@@ -180,7 +176,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     
     // double corrected_heading = gyro.getAngle();
     double corrected_heading = gyro.getAngle();
-    System.out.println("heading" + corrected_heading);
+    // System.out.println("heading" + corrected_heading);
     boolean negative = corrected_heading < 0;
     corrected_heading = Math.abs(corrected_heading);
     double reference = corrected_heading % 360;
@@ -204,10 +200,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double frontRightPower = (rotY - rotX - rx) / denominator;
     double backRightPower = (rotY + rotX - rx) / denominator;
 
-    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    // leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    // leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    // rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    // rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
   }
 
   /**
@@ -243,22 +239,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     // m_drivetrain.setMaxOutput(maxOutput);
   }
 
-  /**
-   * Tank drive the robot from an input left and right side voltage value
-   * Used by RamseteController (AUTONOMOUS PATH DRIVING)
-   * @param leftVolts Voltage to set the left side to
-   * @param rightVolts Voltage to set the right side to
-   */
-  public void tankDriveVolts(double leftVolts, double rightVolts) {
-
-    // leftBack.setVoltage(leftVolts);
-    // inverse the right side to drive forward
-    // rightFront.setVoltage(rightVolts);
-    
-    
-    // no clue what this does but I think its in the examples. "Feed the motor safety object." ????
-    // m_drivetrain.feed();
-  }
 
   /**
    * Get the turning rate of the robot from the gyro
@@ -272,8 +252,70 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    * Resets the used encoders to 0
    */
   public void resetEncoders() {
-    // leftBack.getEncoder().setPosition(0);
-    // rightFront.getEncoder().setPosition(0);
+    leftBack.getEncoder().setPosition(0);
+    rightFront.getEncoder().setPosition(0);
+    rightBack.getEncoder().setPosition(0);
+    leftFront.getEncoder().setPosition(0);
+  }
+
+  // only for front back
+  public double encoderDistance() {
+    return (leftFront.getEncoder().getPosition() + -rightFront.getEncoder().getPosition() + -rightBack.getEncoder().getPosition() + leftBack.getEncoder().getPosition()) / 4;
+  }
+
+  public void clearPowers() {
+    leftFront.set(0);
+    rightFront.set(0);
+    rightBack.set(0);
+    leftBack.set(0);
+  }
+
+  // distance in feet
+  public void holoDrive(double power) {
+    rightFront.setInverted(true);
+    rightBack.setInverted(true);
+    
+    //   var wheelPositions = new MecanumDriveWheelPositions(
+    //   leftFront.getEncoder().getPosition(), rightFront.getEncoder().getPosition(),
+    //   leftBack.getEncoder().getPosition(), rightBack.getEncoder().getPosition());
+
+    // // Get the rotation of the robot from the gyro.
+    // var gyroAngle = gyro.getAngle();
+    // System.out.println(gyroAngle);
+
+    // Update the pose
+    double y = -power; // Remember, this is reversed!
+    double x = 0; // Counteract imperfect strafing
+    double rx = 0;
+    
+    // double corrected_heading = gyro.getAngle();
+    double corrected_heading = gyro.getAngle();
+    // System.out.println("heading" + corrected_heading);
+    boolean negative = corrected_heading < 0;
+    corrected_heading = Math.abs(corrected_heading);
+    double reference = corrected_heading % 360;
+    if (negative) {
+      reference = -reference;
+    }
+
+    double multiplier = 0.9;
+
+    double botHeading = 0;
+    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
+
+    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
+
+    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+    double frontLeftPower = (rotY + rotX + rx) / denominator;
+    double backLeftPower = (rotY - rotX + rx) / denominator;
+    double frontRightPower = (rotY - rotX - rx) / denominator;
+    double backRightPower = (rotY + rotX - rx) / denominator;
+
+    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
   }
 
 
@@ -284,14 +326,4 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   public void putTrajectory(Trajectory trajectory){
     field.getObject("traj").setTrajectory(trajectory);
   }
-
-  /**
-   * Resets the odometry to an initial pose
-   * @param initialPose initial pose to set back to
-   */
-  public void resetOdometry(Pose2d initialPose) {
-    // resetEncoders();
-    // m_odometry.resetPosition(initialPose, gyro.getRotation2d());
-  }
-
 }

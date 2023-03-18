@@ -4,9 +4,7 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.hal.simulation.RoboRioDataJNI;
 import edu.wpi.first.wpilibj.DigitalInput;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
@@ -62,8 +60,8 @@ public class Elevator extends SubsystemBase {
         kD = 0; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.8; 
-        kMinOutput = -0.8;
+        kMaxOutput = 0.9; 
+        kMinOutput = -0.9;
 
         maxVel = 1; // rpm
         maxAcc = 1;
@@ -87,6 +85,11 @@ public class Elevator extends SubsystemBase {
     public void resetOutputRange() {
         spoolPID.setOutputRange(kMinOutput, kMaxOutput); 
     }
+
+    public void resetEncoder() {
+        spoolEncoder.setPosition(0);
+    }
+
     @Override
     public void periodic() {
         if (RobotContainer.oi.driver.getPOV() == 0) {
@@ -98,64 +101,8 @@ public class Elevator extends SubsystemBase {
                 elevatorTarget += 0.8;
             }
         }
-        // System.out.println(elevatorTarget);
-         // read PID coefficients from SmartDashboard
-        // double p = SmartDashboard.getNumber("Elevator P Gain", 0);
-        // double i = SmartDashboard.getNumber("Elevator I Gain", 0);
-        // double d = SmartDashboard.getNumber("Elevator D Gain", 0);
-        // double iz = SmartDashboard.getNumber("Elevator I Zone", 0);
-        // double ff = SmartDashboard.getNumber("Elevator Feed Forward", 0);
-        // double max = SmartDashboard.getNumber("Elevator Max Output", 0);
-        // double min = SmartDashboard.getNumber("Elevator Min Output", 0);
-        // if (elevatorTopLimit.get()) {
-        //     // active
-        // }
-        spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
-        // if (toggle_up) {
-        //     spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
-        // } else {
-        //     // spoolNeo.set(0);
-        // }
-        
-        // if PID coefficients on SmartDashboard have changed, write new values to controller
-        // if((p != kP)) { spoolPID.setP(p); kP = p; }
-        // if((i != kI)) { spoolPID.setI(i); kI = i; }
-        // if((d != kD)) { spoolPID.setD(d); kD = d; }
-        // if((iz != kIz)) { spoolPID.setIZone(iz); kIz = iz; }
-        // if((ff != kFF)) { spoolPID.setFF(ff); kFF = ff; }
-        // if((max != kMaxOutput) || (min != kMinOutput)) { 
-        //     spoolPID.setOutputRange(min, max); 
-        // kMinOutput = min; kMaxOutput = max; 
-        // }
-        // if (flipped) {
-        //     spoolPID.setReference(-40, CANSparkMax.ControlType.kPosition);
-        // } else if (!flipped) {
-        //     spoolPID.setReference(0, CANSparkMax.ControlType.kPosition);
-        // } else {
-        //     rotateNeo.set(0);
-        // }
-        // reference input is inches, I think
-        // switch (targetState) {
-        //     case GrabCone:
-        //         resetOutputRange();
-        //         spoolPID.setReference(0, CANSparkMax.ControlType.kPosition);
-        //         break;
-        //     case Low:
-        //         resetOutputRange();
-        //         spoolPID.setReference(4, CANSparkMax.ControlType.kPosition);
-        //         break;
-        //     case Medium:
-        //         resetOutputRange();
-        //         spoolPID.setReference(5, CANSparkMax.ControlType.kPosition);
-        //         break;
-        //     default:
-        //         spoolPID.setOutputRange(0, 0);
-        //         break;
-        // }
-        // System.out.println(spoolEncoder.getPosition());
-        // if (targetState == ElevatorLevel.Medium && elevatorTopLimit.get()) {
-            // spoolEncoder.setPosition(min)
-        // }
+
+        // spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
     }
 
 }

@@ -4,11 +4,8 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
 
-import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -99,12 +96,21 @@ public class Intake extends SubsystemBase {
         scoring = !scoring;
     }
 
-    public void run_intake_in() {
-       intakeNeo.set(0.4); 
+    public void resetEncoder() {
+        rotateEncoder.setPosition(0);
     }
 
-    public void run_intake_out() {
-       intakeNeo.set(-1); 
+    public void run_intake_in(double power) {
+       intakeNeo.set(power); 
+    }
+
+    public void run_intake_out(double power) {
+       intakeNeo.set(-power); 
+    }
+
+    public void set_angle(double newangle) {
+        double a = newangle > 80 ? 80 : newangle < 0 ? 0 : newangle;
+        rotatePID.setReference(-a, CANSparkMax.ControlType.kPosition);
     }
 
     public void flip_intake() {
@@ -122,7 +128,9 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
+        power = SmartDashboard.getNumber("power ", power);
+        // double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
+        double outtake = 0;
         double intake = outtake > 0.05 ? outtake < 0.1 ? -0.1 : -outtake : RobotContainer.oi.driver.getRightTriggerAxis() > 0.05 ? 1 : 0;
         if (Math.abs(intake) > 0.05) {
             intakeNeo.set(intake);
@@ -136,7 +144,7 @@ public class Intake extends SubsystemBase {
         // double max = SmartDashboard.getNumber("Max Output", 0);
         // double min = SmartDashboard.getNumber("Min Output", 0);
         angle = SmartDashboard.getNumber("angle ", angle);
-        power = SmartDashboard.getNumber("power ", power);
+       
         
         // if PID coefficients on SmartDashboard have changed, write new values to controller
         // if((p != kP)) { rotatePID.setP(p); kP = p; }
@@ -150,13 +158,13 @@ public class Intake extends SubsystemBase {
         // }
         // rotatePID.setFeedbackDevice(rotateEncoder);
         // System.out.println(flipped);
-        if (flipped) {
-            rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
-        } else if (!flipped) {
-            rotatePID.setReference(-30, CANSparkMax.ControlType.kPosition);
-        } else {
-            rotateNeo.set(0);
-        }
+        // if (flipped) {
+        //     rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
+        // } else if (!flipped) {
+        //     rotatePID.setReference(-30, CANSparkMax.ControlType.kPosition);
+        // } else {
+        //     rotateNeo.set(0);
+        // }
         // if (motorEndstop(rotateNeo.getAppliedOutput(), rotateEncoder.getPosition()) && rotateEncoder.getPosition() > -8) {
         //     rotateEncoder.setPosition(0);
         // }

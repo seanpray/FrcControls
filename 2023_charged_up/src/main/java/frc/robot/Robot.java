@@ -5,6 +5,9 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -20,12 +23,25 @@ public class Robot extends TimedRobot {
 
   private RobotContainer m_robotContainer;
 
+  private static final String kDefaultAuto = "blank";
+  private static final String kPreload = "preload only";
+  private static final String kPreloadBackup = "preload backup";
+  private static final String kChargeDock = "charge dock";
+  private String m_autoSelected;
+  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  private final Timer m_timer = new Timer();
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+    m_chooser.setDefaultOption("Blank Auto", kDefaultAuto);
+    m_chooser.addOption("Preload Backup", kPreloadBackup);
+    m_chooser.addOption("Preload charge dock", kChargeDock);
+    m_chooser.addOption("Preload only", kPreload);
+    SmartDashboard.putData("Auto choices", m_chooser);
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
@@ -57,6 +73,12 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    m_timer.start();
+    RobotContainer.elevator.resetEncoder();
+    RobotContainer.intake.resetEncoder();
+    RobotContainer.fourbar.resetEncoder();
+    m_autoSelected = m_chooser.getSelected();
+    System.out.println("Auto selected: " + m_autoSelected);
     // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
     // // schedule the autonomous command (example)
@@ -64,10 +86,53 @@ public class Robot extends TimedRobot {
     //   m_autonomousCommand.schedule();
     // }
   }
+  // false if done
+  public boolean preloadScore() {
+    if (m_timer.get() < 2.0) {
+      RobotContainer.intake.set_angle(15);
+      return true;
+    }
+    if (m_timer.get() < 2.7) {
+      RobotContainer.intake.run_intake_in(0.1);
+      return true;
+    }
+    if (m_timer.get() < 4.0) {
+      RobotContainer.intake.run_intake_out(0.5);
+      return true;
+    }
+    return false;
+  }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    switch (m_autoSelected) {
+      case kPreloadBackup:
+        if (preloadScore()) {
+          return;
+        }
+        if (RobotContainer.drivetrain.encoderDistance() < 72) {
+          RobotContainer.drivetrain.holoDrive(-0.3);
+        }
+        return;
+      case kChargeDock:
+      if (preloadScore()) {
+        return;
+      }
+        if (RobotContainer.drivetrain.encoderDistance() < 72) {
+          RobotContainer.drivetrain.holoDrive(-0.3);
+        }
+        // Put custom auto code here
+        return;
+        //blank
+      case kDefaultAuto:
+        break;
+        // preload only
+      default:
+        preloadScore();
+        break;
+    }
+    RobotContainer.drivetrain.clearPowers();
   }
 
   @Override

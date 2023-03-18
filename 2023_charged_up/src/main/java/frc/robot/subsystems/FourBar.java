@@ -4,7 +4,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
 
-import edu.wpi.first.hal.simulation.RoboRioDataJNI;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
@@ -28,6 +27,10 @@ public class FourBar extends SubsystemBase {
 
     public void toggleExtend() {
         extended = !extended;
+    }
+
+    public void resetEncoder() {
+        fourbarEncoder.setPosition(0);
     }
 
     public FourBar() {
