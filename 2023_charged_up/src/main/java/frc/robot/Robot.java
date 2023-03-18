@@ -78,6 +78,7 @@ public class Robot extends TimedRobot {
     RobotContainer.intake.resetEncoder();
     RobotContainer.fourbar.resetEncoder();
     m_autoSelected = m_chooser.getSelected();
+    SmartDashboard.putData(m_chooser);
     System.out.println("Auto selected: " + m_autoSelected);
     // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 

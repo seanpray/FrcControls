@@ -3,6 +3,7 @@ package frc.robot.subsystems;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
+import com.revrobotics.CANSparkMax.IdleMode;
 
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
@@ -19,7 +20,7 @@ public class Intake extends SubsystemBase {
     CANSparkMax rotateNeo = new CANSparkMax(Constants.intake_rotate, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
     private RelativeEncoder rotateEncoder = rotateNeo.getEncoder();
     CANSparkMax intakeNeo = new CANSparkMax(Constants.intake_intake, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-    double counter = 0;
+    double level = 0;
     private SparkMaxPIDController rotatePID = rotateNeo.getPIDController();
 
     public boolean scoring = false;
@@ -35,7 +36,7 @@ public class Intake extends SubsystemBase {
     // true is down
     boolean flipped = false;
     double initial_position = 0;
-    double angle = -70;
+    double angle = -80;
     public double previousEncoder = 0;
     public double stallEpsilon = 3;
 
@@ -47,6 +48,7 @@ public class Intake extends SubsystemBase {
     // cone scoring for high goal when pushed against 2x4s, 15 degrees 0.5 power
 
     public Intake() {
+        rotateNeo.setIdleMode(IdleMode.kBrake);
         time.start();
         rotateEncoder.setPosition(0);
         initial_position = rotateEncoder.getPosition();
@@ -114,7 +116,11 @@ public class Intake extends SubsystemBase {
     }
 
     public void flip_intake() {
-        flipped = !flipped;
+        level++;
+        // flipped = !flipped;
+        if (level > 2) {
+            level = 0;
+        }
     }
 
     // public void toggleCompressor() {
@@ -131,19 +137,23 @@ public class Intake extends SubsystemBase {
         power = SmartDashboard.getNumber("power ", power);
         // double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
         double outtake = 0;
-        double intake = outtake > 0.05 ? outtake < 0.1 ? -0.1 : -outtake : RobotContainer.oi.driver.getRightTriggerAxis() > 0.05 ? 1 : 0;
+        double intake = outtake > 0.05 ? outtake < 0.1 ? -0.1 : -outtake : RobotContainer.oi.driver.getRightTriggerAxis() > 0.05 ? 0.55 : 0;
         if (Math.abs(intake) > 0.05) {
             intakeNeo.set(intake);
         } else {
             intakeNeo.set(0);
         }
-
+        if (level == 0) {
+            angle = -85;
+        } else if (level == 1) {
+            angle = -50;
+        } else {
+            angle = -15;
+        }
+        rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
 
          // read PID coefficients from SmartDashboard
-       
-        // double max = SmartDashboard.getNumber("Max Output", 0);
-        // double min = SmartDashboard.getNumber("Min Output", 0);
-        angle = SmartDashboard.getNumber("angle ", angle);
+        // angle = SmartDashboard.getNumber("angle ", angle);
        
         
         // if PID coefficients on SmartDashboard have changed, write new values to controller

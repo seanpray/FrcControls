@@ -1,0 +1,27 @@
+{
+  "NTProvider": {
+    "types": {
+      "/FMSInfo": "FMSInfo",
+      "/LiveWindow/DrivetrainSubsystem": "Subsystem",
+      "/LiveWindow/Elevator": "Subsystem",
+      "/LiveWindow/FourBar": "Subsystem",
+      "/LiveWindow/Intake": "Subsystem",
+      "/LiveWindow/Penetrator": "Subsystem",
+      "/LiveWindow/Ungrouped/DigitalInput[4]": "Digital Input",
+      "/LiveWindow/Ungrouped/Scheduler": "Scheduler",
+      "/SmartDashboard/Auto choices": "String Chooser",
+      "/SmartDashboard/Field": "Field2d"
+    }
+  },
+  "NetworkTables": {
+    "SmartDashboard": {
+      "Auto choices": {
+        "open": true
+      },
+      "Field": {
+        "open": true
+      },
+      "open": true
+    }
+  }
+}
