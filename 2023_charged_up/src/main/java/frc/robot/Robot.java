@@ -4,12 +4,14 @@
 
 package frc.robot;
 
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -28,6 +30,7 @@ public class Robot extends TimedRobot {
   private static final String kPreloadBackup = "preload backup";
   private static final String kChargeDock = "charge dock";
   private String m_autoSelected;
+  public boolean auton = false;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   private final Timer m_timer = new Timer();
 
@@ -37,6 +40,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    CameraServer.startAutomaticCapture();
+
     m_chooser.setDefaultOption("Blank Auto", kDefaultAuto);
     m_chooser.addOption("Preload Backup", kPreloadBackup);
     m_chooser.addOption("Preload charge dock", kChargeDock);
@@ -73,12 +78,18 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    RobotContainer.drivetrain.auton(true);
+    RobotContainer.drivetrain.resetGyro();
+    auton = true;
     m_timer.start();
-    RobotContainer.elevator.resetEncoder();
-    RobotContainer.intake.resetEncoder();
-    RobotContainer.fourbar.resetEncoder();
+    // RobotContainer.elevator.resetEncoder();
+    // RobotContainer.intake.resetEncoder();
+    // RobotContainer.fourbar.resetEncoder();
     m_autoSelected = m_chooser.getSelected();
-    SmartDashboard.putData(m_chooser);
+    System.out.println(m_autoSelected);
+    // SmartDashboard.putData(m_chooser);
+    RobotContainer.intake.auton(true);
+    RobotContainer.drivetrain.resetEncoders();
     System.out.println("Auto selected: " + m_autoSelected);
     // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -103,6 +114,18 @@ public class Robot extends TimedRobot {
     }
     return false;
   }
+// true when done
+  public boolean driveAuton(double power, double distance) {
+    if (RobotContainer.drivetrain.encoderDistance() < 80 && m_timer.get() < 6.7) {
+      RobotContainer.drivetrain.holoDrive(power);
+      return false;
+    }
+    if (m_timer.get() > 6.7 && m_timer.get() < 6.7) {
+      RobotContainer.drivetrain.holoDrive(-0.2);
+      return false;
+    }
+    return true;
+  }
 
   /** This function is called periodically during autonomous. */
   @Override
@@ -112,16 +135,16 @@ public class Robot extends TimedRobot {
         if (preloadScore()) {
           return;
         }
-        if (RobotContainer.drivetrain.encoderDistance() < 72) {
-          RobotContainer.drivetrain.holoDrive(-0.3);
+        if (driveAuton(0.3, 80)) {
+          break;
         }
         return;
       case kChargeDock:
-      if (preloadScore()) {
-        return;
-      }
-        if (RobotContainer.drivetrain.encoderDistance() < 72) {
-          RobotContainer.drivetrain.holoDrive(-0.3);
+        if (preloadScore()) {
+          return;
+        }
+        if (driveAuton(0.3, 72)) {
+          break;
         }
         // Put custom auto code here
         return;
@@ -130,10 +153,18 @@ public class Robot extends TimedRobot {
         break;
         // preload only
       default:
-        preloadScore();
-        break;
+        if (preloadScore()) {
+          return;
+        }
     }
-    RobotContainer.drivetrain.clearPowers();
+    if (auton) {
+      RobotContainer.intake.auton(false);
+      RobotContainer.drivetrain.clearPowers();
+      RobotContainer.drivetrain.auton(false);
+      auton = false;
+    }
+    // System.out.println(auton);
+
   }
 
   @Override

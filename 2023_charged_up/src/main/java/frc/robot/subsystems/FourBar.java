@@ -49,8 +49,8 @@ public class FourBar extends SubsystemBase {
         kD = 0; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.8; 
-        kMinOutput = -0.8;
+        kMaxOutput = 0.6; 
+        kMinOutput = -0.6;
 
         maxVel = 30; // rpm
         maxAcc = 5;
@@ -73,15 +73,15 @@ public class FourBar extends SubsystemBase {
     @Override
     public void periodic() {
         // System.out.println(RobotContainer.oi.driver.getPOV());
-        if (Math.abs(RobotContainer.oi.driver.getPOV() - 90) < 10) {
-            if (targetExtend > 2) {
-                targetExtend -= 0.5;
-            }
-        } else if (Math.abs(RobotContainer.oi.driver.getPOV() - 270) < 10) {
-            if (targetExtend < 100) {
-                targetExtend += 0.5;
-            }
-        }
+        // if (Math.abs(RobotContainer.oi.driver.getPOV() - 90) < 10) {
+        //     if (targetExtend > 2) {
+        //         targetExtend -= 0.5;
+        //     }
+        // } else if (Math.abs(RobotContainer.oi.driver.getPOV() - 270) < 10) {
+        //     if (targetExtend < 100) {
+        //         targetExtend += 0.5;
+        //     }
+        // }
         // TODO check if it's just get() or getAppliedOutput()
         // if (motorEndstop(neo550.getAppliedOutput(), fourbarEncoder.getPosition()) && fourbarEncoder.getPosition() < 45) {
         //     fourbarEncoder.setPosition(0);

@@ -102,7 +102,7 @@ public class Elevator extends SubsystemBase {
             }
         }
 
-        // spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
+        spoolPID.setReference(elevatorTarget, CANSparkMax.ControlType.kPosition);
     }
 
 }

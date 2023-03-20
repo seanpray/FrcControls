@@ -8,17 +8,13 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveOdometry;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.Constants;
@@ -30,6 +26,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   
   public void initDefaultCommand() {}
   private double gyro_offset = 0;
+
+  public boolean auton = false;
   /*
   Initialize drivebase motors from constants
   // */
@@ -55,13 +53,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   // 12 60 -> 35 60 8 inch mecanum
   double encoderConstant = (1 / 8.57143) * 8 * Math.PI;
 
-  // add entry to network table to put robot X and Y values from odometry
-  NetworkTableEntry m_xEntry = NetworkTableInstance.getDefault().getTable("troubleshooting").getEntry("X");
-  NetworkTableEntry m_yEntry = NetworkTableInstance.getDefault().getTable("troubleshooting").getEntry("Y");
-
-  // create field object to update robot position
-  Field2d field = new Field2d();
-
   // create a drivetrain from the leftBack and rightFront motors
   
   // initialize gyro
@@ -72,6 +63,9 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   // create odometry object to keep track of robot position
   static MecanumDriveOdometry m_odometry;
 
+  public void resetGyro() {
+    gyro_offset = gyro.getAngle();
+  }
 
   public DrivetrainSubsystem() {
     gyro.setYawAxis(ADIS16470_IMU.IMUAxis.kY);
@@ -90,11 +84,11 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
     // Sets the distance per pulse for the encoders to translate from encoder ticks to meters
     // rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
-
-    SmartDashboard.putData("Field", field);
-
   
 } 
+  public void auton(boolean state) {
+    auton = state;
+  }
   /**
    * Gets heading from gyro
    * @return heading of gyro in degrees
@@ -103,7 +97,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     return gyro.getAngle();
   }
 
-  public final double dead_zone = 0.08;
+  public final double dead_zone = 0.09;
 
    // can think of curve_b as shifting down so the graph so it starts at 0, basically applies a deadzone
   public static double curveInput(double v, boolean turbo, double curve_b) {
@@ -126,6 +120,20 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
   @Override
   public void periodic() {
+    if (auton) {
+      return;
+    }
+    if (RobotContainer.oi.driver.getRightStickButton()) {
+      leftFront.setIdleMode(IdleMode.kBrake);
+      rightFront.setIdleMode(IdleMode.kBrake);
+      rightBack.setIdleMode(IdleMode.kBrake);
+      leftBack.setIdleMode(IdleMode.kBrake);
+    } else {
+      leftFront.setIdleMode(IdleMode.kCoast);
+      rightFront.setIdleMode(IdleMode.kCoast);
+      rightBack.setIdleMode(IdleMode.kCoast);
+      leftBack.setIdleMode(IdleMode.kCoast);
+    }
     rightFront.setInverted(true);
     rightBack.setInverted(true);
     
@@ -155,27 +163,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double multiplier = 0.5;
     if (RobotContainer.oi.driver.getLeftStickButton()) {
       multiplier = 1;
-    }
-    
-    if (multiplier != 1) {
-      x /= Math.sqrt(2);
-    }
-   
+    } 
 
-
-    //  double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-    //  double frontLeftPower = (y + x + rx) / denominator;
-    //  double backLeftPower = (y - x + rx) / denominator;
-    //  double frontRightPower = (y - x - rx) / denominator;
-    //  double backRightPower = (y + x - rx) / denominator;
-
-    // leftFront.set(clamp(curve(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1), -1, 1));
-    // rightFront.set(clamp(curve(PID.motor_2 * frontRightPower * multiplier, multiplier == 1), -1, 1));
-    // rightBack.set(clamp(curve(PID.motor_3 * backRightPower * multiplier, multiplier == 1), -1, 1));
-    // leftBack.set(clamp(curve(PID.motor_4 * backLeftPower * multiplier, multiplier == 1), -1, 1));
-    
     // double corrected_heading = gyro.getAngle();
-    double corrected_heading = gyro.getAngle();
+    double corrected_heading = gyro.getAngle() + 180;
     // System.out.println("heading" + corrected_heading);
     boolean negative = corrected_heading < 0;
     corrected_heading = Math.abs(corrected_heading);
@@ -185,7 +176,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     }
 
     double botHeading = reference * Math.PI / 180.0;
-    if (RobotContainer.oi.driver.getBButton()) {
+    if (RobotContainer.oi.driver.getXButton()) {
       gyro_offset = botHeading;
     }
     botHeading -= gyro_offset;
@@ -200,10 +191,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double frontRightPower = (rotY - rotX - rx) / denominator;
     double backRightPower = (rotY + rotX - rx) / denominator;
 
-    // leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    // leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    // rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    // rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightFront.set(clamp(curveInput(PID.motor_3 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
+    rightBack.set(clamp(curveInput(PID.motor_2 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
   }
 
   /**
@@ -260,7 +251,9 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
   // only for front back
   public double encoderDistance() {
-    return (leftFront.getEncoder().getPosition() + -rightFront.getEncoder().getPosition() + -rightBack.getEncoder().getPosition() + leftBack.getEncoder().getPosition()) / 4;
+    // System.out.println(leftFront.getEncoder().getPosition());
+    // System.out.println(rightBack.getEncoder().getPosition());
+    return (Math.abs(leftFront.getEncoder().getPosition()) + Math.abs(rightFront.getEncoder().getPosition()) + Math.abs(rightBack.getEncoder().getPosition()) + Math.abs(leftBack.getEncoder().getPosition())) / 4;
   }
 
   public void clearPowers() {
@@ -275,55 +268,11 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     rightFront.setInverted(true);
     rightBack.setInverted(true);
     
-    //   var wheelPositions = new MecanumDriveWheelPositions(
-    //   leftFront.getEncoder().getPosition(), rightFront.getEncoder().getPosition(),
-    //   leftBack.getEncoder().getPosition(), rightBack.getEncoder().getPosition());
-
-    // // Get the rotation of the robot from the gyro.
-    // var gyroAngle = gyro.getAngle();
-    // System.out.println(gyroAngle);
-
-    // Update the pose
     double y = -power; // Remember, this is reversed!
-    double x = 0; // Counteract imperfect strafing
-    double rx = 0;
-    
-    // double corrected_heading = gyro.getAngle();
-    double corrected_heading = gyro.getAngle();
-    // System.out.println("heading" + corrected_heading);
-    boolean negative = corrected_heading < 0;
-    corrected_heading = Math.abs(corrected_heading);
-    double reference = corrected_heading % 360;
-    if (negative) {
-      reference = -reference;
-    }
 
-    double multiplier = 0.9;
-
-    double botHeading = 0;
-    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
-
-    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-    double frontLeftPower = (rotY + rotX + rx) / denominator;
-    double backLeftPower = (rotY - rotX + rx) / denominator;
-    double frontRightPower = (rotY - rotX - rx) / denominator;
-    double backRightPower = (rotY + rotX - rx) / denominator;
-
-    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightFront.set(clamp(curveInput(PID.motor_2 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightBack.set(clamp(curveInput(PID.motor_4 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
-  }
-
-
-  /**
-   * Add a trajectory to the field object that will be displayed on the smart dashboard
-   * @param trajectory Trajectory to add
-   */
-  public void putTrajectory(Trajectory trajectory){
-    field.getObject("traj").setTrajectory(trajectory);
+    leftFront.set(y * PID.motor_1);
+    leftBack.set(y * PID.motor_4);
+    rightFront.set(y * PID.motor_3);
+    rightBack.set(y * PID.motor_2);
   }
 }
