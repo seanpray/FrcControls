@@ -159,7 +159,6 @@ public class Robot extends TimedRobot {
     }
     if (auton) {
       RobotContainer.intake.auton(false);
-      RobotContainer.drivetrain.clearPowers();
       RobotContainer.drivetrain.auton(false);
       auton = false;
     }

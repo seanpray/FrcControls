@@ -31,14 +31,14 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   /*
   Initialize drivebase motors from constants
   // */
-  public static CANSparkMax leftFront = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  public static CANSparkMax leftBack = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  public static CANSparkMax rightBack = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  public static CANSparkMax rightFront = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  // Encoder leftFrontEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
-  // Encoder rightFrontEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
-  // Encoder rightBackEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
-  // Encoder leftBackEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
+  public static CANSparkMax frontLeft = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax backLeft = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax backRight = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public static CANSparkMax frontRight = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  // Encoder frontLeftEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
+  // Encoder frontRightEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
+  // Encoder backRightEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
+  // Encoder backLeftEncoder= new Encoder(6, 7, true, CounterBase.EncodingType.k4X);
 
   static Translation2d frontLeftLocation = new Translation2d(0.2286, 0.2286);
   static Translation2d frontRightLocation = new Translation2d(0.2286, -0.2286);
@@ -46,14 +46,14 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   static Translation2d backRightLocation = new Translation2d(-0.2286, -0.2286);
   public static MecanumDriveKinematics m_drivetrain = new MecanumDriveKinematics(frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation);
 
-  // public static MecanumDrive drive = new MecanumDrive((MotorController) DrivetrainSubsystem.leftFront, (MotorController) DrivetrainSubsystem.leftBack, (MotorController) DrivetrainSubsystem.rightFront, (MotorController) DrivetrainSubsystem.rightBack);
+  // public static MecanumDrive drive = new MecanumDrive((MotorController) DrivetrainSubsystem.frontLeft, (MotorController) DrivetrainSubsystem.backLeft, (MotorController) DrivetrainSubsystem.frontRight, (MotorController) DrivetrainSubsystem.backRight);
 
 
   
   // 12 60 -> 35 60 8 inch mecanum
   double encoderConstant = (1 / 8.57143) * 8 * Math.PI;
 
-  // create a drivetrain from the leftBack and rightFront motors
+  // create a drivetrain from the backLeft and frontRight motors
   
   // initialize gyro
   private final ADIS16470_IMU gyro = new ADIS16470_IMU();
@@ -71,19 +71,19 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     gyro.setYawAxis(ADIS16470_IMU.IMUAxis.kY);
     gyro.configCalTime(edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime._256ms);
     // restores factory defaults on Spark MAX motor controllers and sets encoder positions to 0
-    leftFront.restoreFactoryDefaults();
-    leftBack.restoreFactoryDefaults();
-    rightFront.restoreFactoryDefaults();
-    rightBack.restoreFactoryDefaults();
+    frontLeft.restoreFactoryDefaults();
+    backLeft.restoreFactoryDefaults();
+    frontRight.restoreFactoryDefaults();
+    backRight.restoreFactoryDefaults();
     resetEncoders();
-    leftFront.getEncoder().setPositionConversionFactor(encoderConstant);
-    rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
-    rightBack.getEncoder().setPositionConversionFactor(encoderConstant);
-    leftBack.getEncoder().setPositionConversionFactor(encoderConstant);
+    frontLeft.getEncoder().setPositionConversionFactor(encoderConstant);
+    frontRight.getEncoder().setPositionConversionFactor(encoderConstant);
+    backRight.getEncoder().setPositionConversionFactor(encoderConstant);
+    backLeft.getEncoder().setPositionConversionFactor(encoderConstant);
 
 
     // Sets the distance per pulse for the encoders to translate from encoder ticks to meters
-    // rightFront.getEncoder().setPositionConversionFactor(encoderConstant);
+    // frontRight.getEncoder().setPositionConversionFactor(encoderConstant);
   
 } 
   public void auton(boolean state) {
@@ -124,22 +124,22 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
       return;
     }
     if (RobotContainer.oi.driver.getRightStickButton()) {
-      leftFront.setIdleMode(IdleMode.kBrake);
-      rightFront.setIdleMode(IdleMode.kBrake);
-      rightBack.setIdleMode(IdleMode.kBrake);
-      leftBack.setIdleMode(IdleMode.kBrake);
+      frontLeft.setIdleMode(IdleMode.kBrake);
+      frontRight.setIdleMode(IdleMode.kBrake);
+      backRight.setIdleMode(IdleMode.kBrake);
+      backLeft.setIdleMode(IdleMode.kBrake);
     } else {
-      leftFront.setIdleMode(IdleMode.kCoast);
-      rightFront.setIdleMode(IdleMode.kCoast);
-      rightBack.setIdleMode(IdleMode.kCoast);
-      leftBack.setIdleMode(IdleMode.kCoast);
+      frontLeft.setIdleMode(IdleMode.kCoast);
+      frontRight.setIdleMode(IdleMode.kCoast);
+      backRight.setIdleMode(IdleMode.kCoast);
+      backLeft.setIdleMode(IdleMode.kCoast);
     }
-    rightFront.setInverted(true);
-    rightBack.setInverted(true);
+    frontRight.setInverted(true);
+    backRight.setInverted(true);
     
     //   var wheelPositions = new MecanumDriveWheelPositions(
-    //   leftFront.getEncoder().getPosition(), rightFront.getEncoder().getPosition(),
-    //   leftBack.getEncoder().getPosition(), rightBack.getEncoder().getPosition());
+    //   frontLeft.getEncoder().getPosition(), frontRight.getEncoder().getPosition(),
+    //   backLeft.getEncoder().getPosition(), backRight.getEncoder().getPosition());
 
     // // Get the rotation of the robot from the gyro.
     // var gyroAngle = gyro.getAngle();
@@ -180,7 +180,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
       gyro_offset = botHeading;
     }
     botHeading -= gyro_offset;
-    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(leftFront.getEncoder().getVelocity(), rightFront.getEncoder().getVelocity(), leftBack.getEncoder().getVelocity(), rightBack.getEncoder().getVelocity()));
+    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(frontLeft.getEncoder().getVelocity(), frontRight.getEncoder().getVelocity(), backLeft.getEncoder().getVelocity(), backRight.getEncoder().getVelocity()));
 
     double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
     double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
@@ -190,11 +190,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double backLeftPower = (rotY - rotX + rx) / denominator;
     double frontRightPower = (rotY - rotX - rx) / denominator;
     double backRightPower = (rotY + rotX - rx) / denominator;
+    setPower(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_2 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_3 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
 
-    leftFront.set(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    leftBack.set(clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightFront.set(clamp(curveInput(PID.motor_3 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
-    rightBack.set(clamp(curveInput(PID.motor_2 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1));
   }
 
   /**
@@ -212,23 +209,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   // public DifferentialDriveWheelSpeeds getWheelSpeeds() {
     // return new DifferentialDriveWheelSpeeds(getLeftVelocity(), getRightVelocity());
   // }
-  
-  /**
-   * Call to arcade drive the robot with a power and rotation
-   * @param power drive speed
-   * @param z rotation speed
-   */
-  public void drive(double power, double z){
-    
-  }
 
-  /**
-   * sets the max output of the DifferentialDrive object (scaling factor when driving robot)
-   * @param maxOutput max output to set
-   */
-  public void setMaxOutput(double maxOutput){
-    // m_drivetrain.setMaxOutput(maxOutput);
-  }
 
 
   /**
@@ -243,36 +224,28 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    * Resets the used encoders to 0
    */
   public void resetEncoders() {
-    leftBack.getEncoder().setPosition(0);
-    rightFront.getEncoder().setPosition(0);
-    rightBack.getEncoder().setPosition(0);
-    leftFront.getEncoder().setPosition(0);
+    backLeft.getEncoder().setPosition(0);
+    frontRight.getEncoder().setPosition(0);
+    backRight.getEncoder().setPosition(0);
+    frontLeft.getEncoder().setPosition(0);
   }
 
-  // only for front back
+  // only useful for going in straight lines
   public double encoderDistance() {
-    // System.out.println(leftFront.getEncoder().getPosition());
-    // System.out.println(rightBack.getEncoder().getPosition());
-    return (Math.abs(leftFront.getEncoder().getPosition()) + Math.abs(rightFront.getEncoder().getPosition()) + Math.abs(rightBack.getEncoder().getPosition()) + Math.abs(leftBack.getEncoder().getPosition())) / 4;
+    return (Math.abs(frontLeft.getEncoder().getPosition()) + Math.abs(frontRight.getEncoder().getPosition()) + Math.abs(backRight.getEncoder().getPosition()) + Math.abs(backLeft.getEncoder().getPosition())) / 4;
   }
-
-  public void clearPowers() {
-    leftFront.set(0);
-    rightFront.set(0);
-    rightBack.set(0);
-    leftBack.set(0);
+  public void setPower(double frontLeftPower, double backRightPower, double frontRightPower, double backLeftPower) {
+    frontLeft.set(frontLeftPower * PID.motor_1);
+    backLeft.set(backRightPower * PID.motor_4);
+    frontRight.set(frontRightPower * PID.motor_3);
+    backRight.set(backLeftPower * PID.motor_2);
   }
-
   // distance in feet
   public void holoDrive(double power) {
-    rightFront.setInverted(true);
-    rightBack.setInverted(true);
+    frontRight.setInverted(true);
+    backRight.setInverted(true);
     
     double y = -power; // Remember, this is reversed!
-
-    leftFront.set(y * PID.motor_1);
-    leftBack.set(y * PID.motor_4);
-    rightFront.set(y * PID.motor_3);
-    rightBack.set(y * PID.motor_2);
+    setPower(y, y, y, y);
   }
 }
