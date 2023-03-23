@@ -105,25 +105,39 @@ public class Robot extends TimedRobot {
       return true;
     }
     if (m_timer.get() < 2.7) {
-      RobotContainer.intake.run_intake_in(0.1);
+      RobotContainer.intake.runIntakeIn(0.1);
       return true;
     }
     if (m_timer.get() < 4.0) {
-      RobotContainer.intake.run_intake_out(0.5);
+      RobotContainer.intake.runIntakeOut(0.5);
       return true;
     }
     return false;
   }
 // true when done
+  boolean drive = false;
   public boolean driveAuton(double power, double distance) {
-    if (RobotContainer.drivetrain.encoderDistance() < 80 && m_timer.get() < 6.7) {
-      RobotContainer.drivetrain.holoDrive(power);
+    if (Math.abs(RobotContainer.drivetrain.encoderDistance()) < distance && !drive) {
+      RobotContainer.drivetrain.holoDrive(power, 0);
       return false;
     }
-    if (m_timer.get() > 6.7 && m_timer.get() < 6.7) {
-      RobotContainer.drivetrain.holoDrive(-0.2);
-      return false;
+    if (!drive) {
+      RobotContainer.drivetrain.holoDrive(0, 0);
     }
+    drive = true;
+
+    if (Math.abs(RobotContainer.drivetrain.getAngle()) > 3) {
+      boolean negative = RobotContainer.drivetrain.getAngle() < 0;
+      double turnPower = (negative ? -1.5 : 1.5) * Math.abs(RobotContainer.drivetrain.getAngle() - 180) / 180;
+      if (turnPower > 1) {
+        turnPower = 1;
+      } else if (turnPower < -1) {
+        turnPower = -1;
+      }
+      RobotContainer.drivetrain.holoDrive(0, turnPower);
+    }
+    RobotContainer.drivetrain.setBrake(true);
+    RobotContainer.drivetrain.setBrake(false);
     return true;
   }
 
@@ -135,7 +149,7 @@ public class Robot extends TimedRobot {
         if (preloadScore()) {
           return;
         }
-        if (driveAuton(0.3, 80)) {
+        if (driveAuton(0.2, 140)) {
           break;
         }
         return;
@@ -143,7 +157,7 @@ public class Robot extends TimedRobot {
         if (preloadScore()) {
           return;
         }
-        if (driveAuton(0.3, 72)) {
+        if (driveAuton(0.2, 72)) {
           break;
         }
         // Put custom auto code here

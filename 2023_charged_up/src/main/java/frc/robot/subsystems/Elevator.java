@@ -6,6 +6,7 @@ import com.revrobotics.SparkMaxPIDController;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
 
@@ -27,6 +28,8 @@ public class Elevator extends SubsystemBase {
     public boolean toggle_up = false;
 
     public double elevatorTarget = 0;
+    DigitalInput elevatorSwitchTop = new DigitalInput(1);
+    DigitalInput elevatorSwitchBottom = new DigitalInput(2);
 
     // positive power goes 
     CANSparkMax spoolNeo = new CANSparkMax(Constants.elevator_neo, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
@@ -92,13 +95,19 @@ public class Elevator extends SubsystemBase {
 
     @Override
     public void periodic() {
+        if (elevatorSwitchBottom.get() && elevatorSwitchTop.get()) {
+            spoolEncoder.setPosition(0);
+        }
+        SmartDashboard.putBoolean("eswitcht", elevatorSwitchTop.get());
+         SmartDashboard.putBoolean("eswitchB", elevatorSwitchBottom.get());
+         SmartDashboard.putNumber("elec", spoolNeo.getOutputCurrent());
         if (RobotContainer.oi.driver.getPOV() == 0) {
-            if (elevatorTarget > -52) {
-                elevatorTarget -= 0.8;
+            if (!elevatorSwitchBottom.get() || !elevatorSwitchTop.get() && spoolNeo.getOutputCurrent() < 30) {
+                elevatorTarget -= 1.2;
             }
-        } else if (Math.abs(RobotContainer.oi.driver.getPOV() - 180) < 10) {
-            if (elevatorTarget < 40) {
-                elevatorTarget += 0.8;
+        } else if (RobotContainer.oi.driver.getPOV() == 180) {
+            if (elevatorTarget < 70) {
+                elevatorTarget += 1.2;
             }
         }
 

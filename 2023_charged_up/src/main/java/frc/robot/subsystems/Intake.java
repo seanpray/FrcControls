@@ -60,20 +60,23 @@ public class Intake extends SubsystemBase {
 
 
     public void down() {
-        if (!intakeSwitch.get()) {
-            angle -= 0.05;
-        }
+        angle -= 0.05;
     }
 
     public Intake() {
+         rotateEncoder.setPosition(0);
+        if (intakeSwitch.get()) {
+            rotateEncoder.setPosition(-80);
+            level = 0;
+        }
         rotateNeo.setIdleMode(IdleMode.kBrake);
-        rotateEncoder.setPosition(0);
+       
         initial_position = rotateEncoder.getPosition();
         rotateNeo.restoreFactoryDefaults();
-        intakeNeo.restoreFactoryDefaults();
+        intakeNeo.restoreFactoryDefaults(); 
         climbSolenoid.set(DoubleSolenoid.Value.kForward);
         // in degrees, 1 neo rotation is 18 degrees of intake rotation
-        rotateNeo.getEncoder().setPositionConversionFactor(18);
+        rotateEncoder.setPositionConversionFactor(18);
         compressor.enableDigital();
         // compressor_status = true;
 
@@ -115,11 +118,11 @@ public class Intake extends SubsystemBase {
         // rotateEncoder.setPosition(0);
     }
 
-    public void run_intake_in(double power) {
+    public void runIntakeIn(double power) {
        intakeNeo.set(-power); 
     }
 
-    public void run_intake_out(double power) {
+    public void runIntakeOut(double power) {
        intakeNeo.set(power); 
     }
 
@@ -138,16 +141,21 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        if (RobotContainer.oi.driver.getPOV() == 90) {
+        SmartDashboard.putBoolean("switch", intakeSwitch.get());
+        if (RobotContainer.oi.driver.getAButton()) {
             if (intakeSwitch.get()) {
-                rotateNeo.getEncoder().setPosition(-80);
+                rotateEncoder.setPosition(-80);
+                level = 0;
             } else {
-                angle -= 0.2;
-            }
+                angle -= 0.5;
+            }   
         }
         power = SmartDashboard.getNumber("power ", power);
 
         // double outtake = 0;
+        if (auton) {
+            return;
+        }
         if (level >= 0) {
             auton = false;
         }
@@ -156,14 +164,12 @@ public class Intake extends SubsystemBase {
         } else if (level == 1) {
             angle = -80;
         }
-        if (!auton) {
-            double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
-            double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.7 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.53 : 0;
-            if (Math.abs(intake) > 0.1) {
-                intakeNeo.set(intake);
-            } else {
-                intakeNeo.set(-0.08);
-            }
+        double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
+        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.7 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.54 : 0;
+        if (Math.abs(intake) > 0.1) {
+            runIntakeOut(intake);
+        } else {
+            runIntakeIn(0.1);
         }
         // System.out.println(auton);
         // System.out.println(angle);

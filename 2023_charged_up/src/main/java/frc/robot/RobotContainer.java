@@ -72,6 +72,8 @@ public class RobotContainer {
       .toggleWhenPressed(new InstantCommand(intake::setIntakeLevel));
     new JoystickButton(oi.driver, 6)
       .toggleWhenPressed(new InstantCommand(fourbar::toggleExtend));
+      new JoystickButton(oi.driver, 1)
+      .toggleWhenPressed(new InstantCommand(fourbar::run));
     // new JoystickButton(oi.driver, 6)
     //   .whileActiveContinuous(new InstantCommand(intake::toggle));
 
