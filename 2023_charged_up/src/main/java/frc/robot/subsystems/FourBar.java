@@ -19,7 +19,7 @@ public class FourBar extends SubsystemBase {
     public double previousEncoder = 0;
     public boolean extended = false;
 
-    double targetExtend = 20;
+    double targetExtend = 2;
     // within 4 degrees
     public double stallEpsilon = 1;
 
@@ -48,7 +48,7 @@ public class FourBar extends SubsystemBase {
         // 360/90 -> 1 rotation = 4 degrees
         fourbarEncoder.setPositionConversionFactor(4);
         fourbarPID.setFeedbackDevice(fourbarEncoder);
-        kP = 0.0035; 
+        kP = 0.004; 
         kI = 0;
         kD = 0; 
         kIz = 0; 
@@ -81,9 +81,9 @@ public class FourBar extends SubsystemBase {
     @Override
     public void periodic() {
         if (RobotContainer.oi.driver.getPOV() == 270 && targetExtend > -3) {
-            targetExtend -= 5;
+            targetExtend -= 0.5;
         } else if (RobotContainer.oi.driver.getPOV() == 90 && targetExtend < 74) {
-            targetExtend += 5;
+            targetExtend += 0.5;
         }
         SmartDashboard.putNumber("pov", RobotContainer.oi.driver.getPOV());
         SmartDashboard.putNumber("neoamp", fourbarNeo.getOutputCurrent());

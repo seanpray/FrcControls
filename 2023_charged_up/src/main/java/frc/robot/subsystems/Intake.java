@@ -65,10 +65,10 @@ public class Intake extends SubsystemBase {
 
     public Intake() {
          rotateEncoder.setPosition(0);
-        if (intakeSwitch.get()) {
-            rotateEncoder.setPosition(-80);
-            level = 0;
-        }
+        // if (intakeSwitch.get()) {
+        //     rotateEncoder.setPosition(-90);
+        //     level = 0;
+        // }
         rotateNeo.setIdleMode(IdleMode.kBrake);
        
         initial_position = rotateEncoder.getPosition();
@@ -77,6 +77,7 @@ public class Intake extends SubsystemBase {
         climbSolenoid.set(DoubleSolenoid.Value.kForward);
         // in degrees, 1 neo rotation is 18 degrees of intake rotation
         rotateEncoder.setPositionConversionFactor(18);
+        // rotateNeo.setInverted(true);
         compressor.enableDigital();
         // compressor_status = true;
 
@@ -84,13 +85,13 @@ public class Intake extends SubsystemBase {
         SmartDashboard.putNumber("power ", power);
 
         // PID coefficients
-        kP = 0.02; 
-        kI = 0.000035;
-        kD = 0.00033; 
+        kP = 0.008; 
+        kI = 0;
+        kD = 0; 
         kIz = 0; 
-        kFF = 0.00005; 
-        kMaxOutput = 0.35; 
-        kMinOutput = -0.35;
+        kFF = 0; 
+        kMaxOutput = 0.4; 
+        kMinOutput = -0.4;
         SmartDashboard.putNumber("intake kP", kP);
         SmartDashboard.putNumber("intake kD", kD);
         SmartDashboard.putNumber("intake kD", kD);
@@ -139,16 +140,26 @@ public class Intake extends SubsystemBase {
         }
     }
 
+    public void raise() {
+        angle += 0.5;
+    }
+
     @Override
     public void periodic() {
         SmartDashboard.putBoolean("switch", intakeSwitch.get());
         if (RobotContainer.oi.driver.getAButton()) {
-            if (intakeSwitch.get()) {
-                rotateEncoder.setPosition(-80);
-                level = 0;
-            } else {
-                angle -= 0.5;
-            }   
+            angle -= 0.3;
+            // if (intakeSwitch.get()) {
+            //     rotateEncoder.setPosition(-80);
+            //     level = 0;
+            // } else {
+            //     angle -= 0.5;
+            //     level = -1;
+            // }   
+        }
+        if (RobotContainer.oi.driver.getBackButton()) {
+            angle += 0.5;
+            level = -1;
         }
         power = SmartDashboard.getNumber("power ", power);
 
@@ -165,14 +176,22 @@ public class Intake extends SubsystemBase {
             angle = -80;
         }
         double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
-        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.7 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.54 : 0;
-        if (Math.abs(intake) > 0.1) {
+        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.53 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.58 : 0;
+        if (RobotContainer.oi.driver.getStartButton()) {
+            intake = 0.37; //mid power
+            //intake = 1;  //full power
+        } else if (RobotContainer.oi.driver.getRightBumper()) {
+            intake = 0.1;
+        } 
+        if (Math.abs(intake) >= 0.1) {
             runIntakeOut(intake);
         } else {
-            runIntakeIn(0.1);
+           // runIntakeIn(0.05);
+           runIntakeIn(0);
         }
         // System.out.println(auton);
-        // System.out.println(angle);
+        // System.out.println();
+        SmartDashboard.putNumber("rotate", rotateEncoder.getPosition());
         rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
     }
 

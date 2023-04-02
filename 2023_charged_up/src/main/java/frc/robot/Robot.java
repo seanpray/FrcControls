@@ -90,6 +90,7 @@ public class Robot extends TimedRobot {
     // SmartDashboard.putData(m_chooser);
     RobotContainer.intake.auton(true);
     RobotContainer.drivetrain.resetEncoders();
+    RobotContainer.elevator.pullUp(5);
     System.out.println("Auto selected: " + m_autoSelected);
     // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -126,16 +127,16 @@ public class Robot extends TimedRobot {
     }
     drive = true;
 
-    if (Math.abs(RobotContainer.drivetrain.getAngle()) > 3) {
-      boolean negative = RobotContainer.drivetrain.getAngle() < 0;
-      double turnPower = (negative ? -1.5 : 1.5) * Math.abs(RobotContainer.drivetrain.getAngle() - 180) / 180;
-      if (turnPower > 1) {
-        turnPower = 1;
-      } else if (turnPower < -1) {
-        turnPower = -1;
-      }
-      RobotContainer.drivetrain.holoDrive(0, turnPower);
-    }
+    // if (Math.abs(RobotContainer.drivetrain.getAngle()) > 3) {
+    //   boolean negative = RobotContainer.drivetrain.getAngle() < 0;
+    //   double turnPower = (negative ? -1.5 : 1.5) * Math.abs(RobotContainer.drivetrain.getAngle() - 180) / 180;
+    //   if (turnPower > 1) {
+    //     turnPower = 1;
+    //   } else if (turnPower < -1) {
+    //     turnPower = -1;
+    //   }
+    //   RobotContainer.drivetrain.holoDrive(0, turnPower);
+    // }
     RobotContainer.drivetrain.setBrake(true);
     RobotContainer.drivetrain.setBrake(false);
     return true;
@@ -149,7 +150,7 @@ public class Robot extends TimedRobot {
         if (preloadScore()) {
           return;
         }
-        if (driveAuton(0.2, 140)) {
+        if (driveAuton(0.2, 120)) {
           break;
         }
         return;

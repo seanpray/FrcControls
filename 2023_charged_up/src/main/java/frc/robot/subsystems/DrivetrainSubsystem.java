@@ -158,7 +158,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   // in rad
   public double getHeading() {
     // double corrected_heading = gyro.getAngle();
-    double corrected_heading = gyro.getAngle() + 180;
+    double corrected_heading = gyro.getAngle() - 180;
     // System.out.println("heading" + corrected_heading);
     boolean negative = corrected_heading < 0;
     corrected_heading = Math.abs(corrected_heading);
@@ -202,9 +202,9 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     if (rx < dead_zone && rx > -dead_zone) {
       rx = 0;
     }
-    rx *= 0.5;
+    rx *= 0.4;
 
-    double multiplier = 0.5;
+    double multiplier = 0.35;
     if (RobotContainer.oi.driver.getLeftStickButton()) {
       multiplier = 1;
     } 

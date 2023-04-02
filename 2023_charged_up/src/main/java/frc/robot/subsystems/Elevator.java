@@ -93,6 +93,10 @@ public class Elevator extends SubsystemBase {
         spoolEncoder.setPosition(0);
     }
 
+    public void pullUp(double amount) {
+        elevatorTarget -= amount;
+    }
+
     @Override
     public void periodic() {
         if (elevatorSwitchBottom.get() && elevatorSwitchTop.get()) {
@@ -102,7 +106,7 @@ public class Elevator extends SubsystemBase {
          SmartDashboard.putBoolean("eswitchB", elevatorSwitchBottom.get());
          SmartDashboard.putNumber("elec", spoolNeo.getOutputCurrent());
         if (RobotContainer.oi.driver.getPOV() == 0) {
-            if (!elevatorSwitchBottom.get() || !elevatorSwitchTop.get() && spoolNeo.getOutputCurrent() < 30) {
+            if (!elevatorSwitchBottom.get() || !elevatorSwitchTop.get() && spoolNeo.getOutputCurrent() < 40) {
                 elevatorTarget -= 1.2;
             }
         } else if (RobotContainer.oi.driver.getPOV() == 180) {
