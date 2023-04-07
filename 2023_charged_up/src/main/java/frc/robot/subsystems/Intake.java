@@ -91,6 +91,7 @@ public class Intake extends SubsystemBase {
         kIz = 0; 
         kFF = 0; 
         kMaxOutput = 0.4; 
+        
         kMinOutput = -0.4;
         SmartDashboard.putNumber("intake kP", kP);
         SmartDashboard.putNumber("intake kD", kD);
@@ -120,15 +121,16 @@ public class Intake extends SubsystemBase {
     }
 
     public void runIntakeIn(double power) {
-       intakeNeo.set(-power); 
+       intakeNeo.set(power); 
     }
 
     public void runIntakeOut(double power) {
-       intakeNeo.set(power); 
+       intakeNeo.set(-power); 
     }
 
     public void set_angle(double newangle) {
         double a = newangle > 80 ? 80 : newangle < 0 ? 0 : newangle;
+        level = -1;
         angle = -a;
         // rotatePID.setReference(-a, CANSparkMax.ControlType.kPosition);
     }
@@ -147,7 +149,7 @@ public class Intake extends SubsystemBase {
     @Override
     public void periodic() {
         SmartDashboard.putBoolean("switch", intakeSwitch.get());
-        if (RobotContainer.oi.driver.getAButton()) {
+        if (RobotContainer.oi.driver.getAButton() || RobotContainer.oi.operator.getAButton()) {
             angle -= 0.3;
             // if (intakeSwitch.get()) {
             //     rotateEncoder.setPosition(-80);
@@ -157,7 +159,7 @@ public class Intake extends SubsystemBase {
             //     level = -1;
             // }   
         }
-        if (RobotContainer.oi.driver.getBackButton()) {
+        if (RobotContainer.oi.driver.getBackButton() || RobotContainer.oi.operator.getBackButton()) {
             angle += 0.5;
             level = -1;
         }
@@ -173,12 +175,12 @@ public class Intake extends SubsystemBase {
         if (level == 0) {
             angle = -15;
         } else if (level == 1) {
-            angle = -80;
+            angle = -75;
         }
         double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
-        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.53 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.58 : 0;
+        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.33 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.52 : 0;
         if (RobotContainer.oi.driver.getStartButton()) {
-            intake = 0.37; //mid power
+            intake = 0.32; //mid power
             //intake = 1;  //full power
         } else if (RobotContainer.oi.driver.getRightBumper()) {
             intake = 0.1;
@@ -186,9 +188,11 @@ public class Intake extends SubsystemBase {
         if (Math.abs(intake) >= 0.1) {
             runIntakeOut(intake);
         } else {
-           // runIntakeIn(0.05);
-           runIntakeIn(0);
+           runIntakeIn(0.05);
+        //    runIntakeIn(0);
         }
+
+        
         // System.out.println(auton);
         // System.out.println();
         SmartDashboard.putNumber("rotate", rotateEncoder.getPosition());

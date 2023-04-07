@@ -177,7 +177,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     if (auton) {
       return;
     }
-    brake = RobotContainer.oi.driver.getRightStickButton();
+    brake = RobotContainer.oi.driver.getRightStickButton() || RobotContainer.oi.operator.getRightStickButton();
     frontRight.setInverted(true);
     backRight.setInverted(true);
     
@@ -198,6 +198,12 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     }
     if (x < dead_zone && x > -dead_zone) {
       x = 0;
+    }
+    if (rx < dead_zone && rx > -dead_zone) {
+      rx = 0;
+    }
+    if (rx == 0) {
+      rx = -RobotContainer.oi.operator.getRightX();
     }
     if (rx < dead_zone && rx > -dead_zone) {
       rx = 0;

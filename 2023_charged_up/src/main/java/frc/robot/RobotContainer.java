@@ -60,8 +60,12 @@ public class RobotContainer {
       // toggleWhenPressed(new InstantCommand(penetrator::score));
     new JoystickButton(oi.driver, 4)
       .whenPressed(new InstantCommand(intake::toggle));
+    new JoystickButton(oi.operator, 4)
+      .whenPressed(new InstantCommand(intake::toggle));
     // servo in out
     new JoystickButton(oi.driver, 2)
+      .toggleWhenPressed(new InstantCommand(penetrator::toggle));
+    new JoystickButton(oi.operator, 2)
       .toggleWhenPressed(new InstantCommand(penetrator::toggle));
 
     // new JoystickButton(oi.driver, 4)
@@ -69,8 +73,10 @@ public class RobotContainer {
       
     new JoystickButton(oi.driver, 5)
       .toggleWhenPressed(new InstantCommand(intake::setIntakeLevel));
-    // new JoystickButton(oi.driver, 6)
-    //   .whileActiveContinuous(new InstantCommand(intake::toggle));
+    new JoystickButton(oi.operator, 5)
+      .toggleWhenPressed(new InstantCommand(intake::setIntakeLevel));
+    new JoystickButton(oi.operator, 6)
+      .toggleWhenPressed(new InstantCommand(elevator::elevatorPreset));
 
     }
 

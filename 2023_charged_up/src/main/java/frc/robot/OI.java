@@ -91,7 +91,7 @@ public class OI {
     
 
     // Operator joystick object initialization
-    public Joystick operator = new Joystick(Constants.operator);
+    public XboxController operator = new XboxController(Constants.operator);
 
 
     /**

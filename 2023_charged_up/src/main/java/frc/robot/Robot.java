@@ -4,7 +4,13 @@
 
 package frc.robot;
 
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.CvSink;
+import edu.wpi.first.cscore.CvSource;
+import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -25,6 +31,8 @@ public class Robot extends TimedRobot {
 
   private RobotContainer m_robotContainer;
 
+  Thread m_visionThread;
+
   private static final String kDefaultAuto = "blank";
   private static final String kPreload = "preload only";
   private static final String kPreloadBackup = "preload backup";
@@ -40,7 +48,40 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    CameraServer.startAutomaticCapture();
+    m_visionThread =
+        new Thread(
+            () -> {
+              // Get the UsbCamera from CameraServer
+              UsbCamera camera = CameraServer.startAutomaticCapture();
+              // Set the resolution
+              camera.setResolution(640, 480);
+
+              // Get a CvSink. This will capture Mats from the camera
+              CvSink cvSink = CameraServer.getVideo();
+              // Setup a CvSource. This will send images back to the Dashboard
+              CvSource outputStream = CameraServer.putVideo("video", 640, 480);
+
+              // Mats are very memory expensive. Lets reuse this Mat.
+              Mat mat = new Mat();
+
+              // This cannot be 'true'. The program will never exit if it is. This
+              // lets the robot stop this thread when restarting robot code or
+              // deploying.
+              while (!Thread.interrupted()) {
+                // Tell the CvSink to grab a frame from the camera and put it
+                // in the source mat.  If there is an error notify the output.
+                if (cvSink.grabFrame(mat) == 0) {
+                  // Send the output the error.
+                  outputStream.notifyError(cvSink.getError());
+                  // skip the rest of the current iteration
+                  continue;
+                }
+               
+                outputStream.putFrame(mat);
+              }
+            });
+    m_visionThread.setDaemon(true);
+    m_visionThread.start();
 
     m_chooser.setDefaultOption("Blank Auto", kDefaultAuto);
     m_chooser.addOption("Preload Backup", kPreloadBackup);
@@ -110,13 +151,15 @@ public class Robot extends TimedRobot {
       return true;
     }
     if (m_timer.get() < 4.0) {
-      RobotContainer.intake.runIntakeOut(0.5);
+      RobotContainer.intake.runIntakeOut(0.52);
       return true;
     }
     return false;
   }
 // true when done
   boolean drive = false;
+  // boolean drive_forward = false;
+  // boolean turnaround = false;
   public boolean driveAuton(double power, double distance) {
     if (Math.abs(RobotContainer.drivetrain.encoderDistance()) < distance && !drive) {
       RobotContainer.drivetrain.holoDrive(power, 0);
@@ -126,17 +169,22 @@ public class Robot extends TimedRobot {
       RobotContainer.drivetrain.holoDrive(0, 0);
     }
     drive = true;
-
-    // if (Math.abs(RobotContainer.drivetrain.getAngle()) > 3) {
+    // System.out.println(RobotContainer.drivetrain.getAngle());
+    // if (!turnaround && Math.abs(Math.abs(RobotContainer.drivetrain.getAngle()) % 360 - 180) > 3) {
     //   boolean negative = RobotContainer.drivetrain.getAngle() < 0;
-    //   double turnPower = (negative ? -1.5 : 1.5) * Math.abs(RobotContainer.drivetrain.getAngle() - 180) / 180;
-    //   if (turnPower > 1) {
-    //     turnPower = 1;
-    //   } else if (turnPower < -1) {
-    //     turnPower = -1;
+    //   double turnPower = (negative ? -1.2 : 1.2) * Math.abs(Math.abs(RobotContainer.drivetrain.getAngle()) % 360 - 180) / 180;
+    //   if (turnPower > 0.5) {
+    //     turnPower = 0.5;
+    //   } else if (turnPower < -0.5) {
+    //     turnPower = -0.5;
     //   }
-    //   RobotContainer.drivetrain.holoDrive(0, turnPower);
+    //   RobotContainer.drivetrain.holoDrive(0, turnPower * 0.6);
+    //   return false;
     // }
+    // if (!turnaround) {
+    //   RobotContainer.drivetrain.holoDrive(0, 0);
+    // }
+    // turnaround = true;
     RobotContainer.drivetrain.setBrake(true);
     RobotContainer.drivetrain.setBrake(false);
     return true;
@@ -145,6 +193,7 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    RobotContainer.fourbar.run();
     switch (m_autoSelected) {
       case kPreloadBackup:
         if (preloadScore()) {

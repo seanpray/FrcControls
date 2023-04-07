@@ -5,7 +5,6 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
 import com.revrobotics.CANSparkMax.IdleMode;
 
-import edu.wpi.first.hal.simulation.RoboRioDataJNI;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -48,13 +47,13 @@ public class FourBar extends SubsystemBase {
         // 360/90 -> 1 rotation = 4 degrees
         fourbarEncoder.setPositionConversionFactor(4);
         fourbarPID.setFeedbackDevice(fourbarEncoder);
-        kP = 0.004; 
+        kP = 0.05; 
         kI = 0;
         kD = 0; 
         kIz = 0; 
         kFF = 0; 
-        kMaxOutput = 0.4; 
-        kMinOutput = -0.4;
+        kMaxOutput = 0.6; 
+        kMinOutput = -0.6;
 
         maxVel = 10 ; // rpm
         maxAcc = 5;
@@ -75,15 +74,15 @@ public class FourBar extends SubsystemBase {
     }
 
     public void run() {
-        targetExtend -= 10;
+        targetExtend = -5;
     }
 
     @Override
     public void periodic() {
-        if (RobotContainer.oi.driver.getPOV() == 270 && targetExtend > -3) {
-            targetExtend -= 0.5;
-        } else if (RobotContainer.oi.driver.getPOV() == 90 && targetExtend < 74) {
-            targetExtend += 0.5;
+        if ((RobotContainer.oi.driver.getPOV() == 270 || RobotContainer.oi.operator.getPOV() == 270) && targetExtend > -3) {
+            targetExtend -= 1;
+        } else if ((RobotContainer.oi.driver.getPOV() == 90 || RobotContainer.oi.operator.getPOV() == 90) && targetExtend < 74) {
+            targetExtend += 1;
         }
         SmartDashboard.putNumber("pov", RobotContainer.oi.driver.getPOV());
         SmartDashboard.putNumber("neoamp", fourbarNeo.getOutputCurrent());
