@@ -123,10 +123,10 @@ public class Elevator extends SubsystemBase {
             // spoolEncoder.setPosition(0);
         }
         changeElevatorTarget = false;
-        SmartDashboard.putBoolean("eswitcht", elevatorSwitchTop.get());
-         SmartDashboard.putBoolean("eswitchB", elevatorSwitchBottom.get());
-         SmartDashboard.putNumber("eencoder",spoolEncoder.getPosition());
-         SmartDashboard.putNumber("elec", spoolNeo.getOutputCurrent());
+        // SmartDashboard.putBoolean("eswitcht", elevatorSwitchTop.get());
+        //  SmartDashboard.putBoolean("eswitchB", elevatorSwitchBottom.get());
+        //  SmartDashboard.putNumber("eencoder",spoolEncoder.getPosition());
+        //  SmartDashboard.putNumber("elec", spoolNeo.getOutputCurrent());
         if (RobotContainer.oi.driver.getPOV() == 0 || RobotContainer.oi.operator.getPOV() == 0) {
             elevatorLevel = 0;
             if (!(elevatorSwitchBottom.get() && elevatorSwitchTop.get()) && spoolNeo.getOutputCurrent() < 85) {

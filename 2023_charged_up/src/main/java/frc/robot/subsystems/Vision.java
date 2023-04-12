@@ -26,13 +26,13 @@ public class Vision extends SubsystemBase {
     @Override
     public void periodic() {
         // update network table entries
-        heading = table.getEntry("heading").getDouble(Double.MAX_VALUE);
-        x = table.getEntry("x_pos").getDouble(Double.MAX_VALUE);
-        y = table.getEntry("y_pos").getDouble(Double.MAX_VALUE);
-        z = table.getEntry("z_pos").getDouble(Double.MAX_VALUE);
-        tag_translation_range = table.getEntry("tag_translation_range").getDouble(Double.MAX_VALUE);
-        tag_rotation_range = table.getEntry("tag_rotation_range").getDouble(Double.MAX_VALUE);
-        frame_time = Long.parseLong(table.getEntry("frame_time").getString("0"));
+        // heading = table.getEntry("heading").getDouble(Double.MAX_VALUE);
+        // x = table.getEntry("x_pos").getDouble(Double.MAX_VALUE);
+        // y = table.getEntry("y_pos").getDouble(Double.MAX_VALUE);
+        // z = table.getEntry("z_pos").getDouble(Double.MAX_VALUE);
+        // tag_translation_range = table.getEntry("tag_translation_range").getDouble(Double.MAX_VALUE);
+        // tag_rotation_range = table.getEntry("tag_rotation_range").getDouble(Double.MAX_VALUE);
+        // frame_time = Long.parseLong(table.getEntry("frame_time").getString("0"));
     }
 
     public boolean valid() {

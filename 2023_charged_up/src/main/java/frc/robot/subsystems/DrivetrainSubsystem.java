@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
 import frc.robot.Constants;
+import frc.robot.Robot;
 
 public class DrivetrainSubsystem extends SubsystemBase {  /**
    *
@@ -28,7 +29,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   public void initDefaultCommand() {}
   private double gyroOffset = 0;
 
-  public boolean auton = false;
   /*
   Initialize drivebase motors from constants
   // */
@@ -72,17 +72,17 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     double dt = (System.currentTimeMillis() - previousTimestamp) / 1000;
     // y is vertical, z is forward, x is sideways
     totalX += 0.5 * gyro.getAccelZ() * (dt * dt);
-    SmartDashboard.putNumber("X", Math.acos(gyro.getAccelZ() / 9.8065));
-    SmartDashboard.putNumber("Y", gyro.getAccelY());
-    SmartDashboard.putNumber("Z", gyro.getAccelZ());
-    SmartDashboard.putNumber("X3", gyro.getXFilteredAccelAngle());
-    SmartDashboard.putNumber("Y3", gyro.getYFilteredAccelAngle());
+    // SmartDashboard.putNumber("X", Math.acos(gyro.getAccelZ() / 9.8065));
+    // SmartDashboard.putNumber("Y", gyro.getAccelY());
+    // SmartDashboard.putNumber("Z", gyro.getAccelZ());
+    // SmartDashboard.putNumber("X3", gyro.getXFilteredAccelAngle());
+    // SmartDashboard.putNumber("Y3", gyro.getYFilteredAccelAngle());
     // Math.atan(dt)
 
-    SmartDashboard.putNumber("encoder", encoderDistance());
+    // SmartDashboard.putNumber("encoder", encoderDistance());
     // System.out.println("encoder" + encoderDistance());
     // System.out.println("gyro " + totalX);
-    SmartDashboard.putNumber("gyro", totalX);
+    // SmartDashboard.putNumber("gyro", totalX);
 
   }
 
@@ -109,10 +109,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     // frontRight.getEncoder().setPositionConversionFactor(encoderConstant);
   
   } 
-
-  public void auton(boolean state) {
-    auton = state;
-  }
 
   public final double dead_zone = 0.09;
 
@@ -172,9 +168,9 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
 
   @Override
   public void periodic() {
-    poseApproximation();
-    previousTimestamp = System.currentTimeMillis();
-    if (auton) {
+    // poseApproximation();
+    // previousTimestamp = System.currentTimeMillis();
+    if (frc.robot.Robot.isAuton()) {
       return;
     }
     brake = RobotContainer.oi.driver.getRightStickButton() || RobotContainer.oi.operator.getRightStickButton();
@@ -208,7 +204,7 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     if (rx < dead_zone && rx > -dead_zone) {
       rx = 0;
     }
-    rx *= 0.4;
+    rx *= 0.7;
 
     double multiplier = 0.35;
     if (RobotContainer.oi.driver.getLeftStickButton()) {

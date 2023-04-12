@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.DigitalInput;
 
 public class Intake extends SubsystemBase {
 
-    public boolean auton = false;
     public double kP, kI, kD, kIz, kFF, kMaxOutput, kMinOutput, maxVel, maxAcc, minVel, allowedErr;
     Compressor compressor = new Compressor(PneumaticsModuleType.REVPH);
     // positive power goes up
@@ -39,15 +38,6 @@ public class Intake extends SubsystemBase {
     double angle = -15;
     public double previousEncoder = 0;
     public double stallEpsilon = 3;
-
-    public void auton(boolean state) {
-        auton = state;
-        if (!auton) {
-            level = 0;
-        } else {
-            level = -1;
-        }
-    }
 
     DigitalInput intakeSwitch = new DigitalInput(0);
 
@@ -81,8 +71,8 @@ public class Intake extends SubsystemBase {
         compressor.enableDigital();
         // compressor_status = true;
 
-        SmartDashboard.putNumber("angle ", angle);
-        SmartDashboard.putNumber("power ", power);
+        // SmartDashboard.putNumber("angle ", angle);
+        // SmartDashboard.putNumber("power ", power);
 
         // PID coefficients
         kP = 0.008; 
@@ -93,9 +83,9 @@ public class Intake extends SubsystemBase {
         kMaxOutput = 0.4; 
         
         kMinOutput = -0.4;
-        SmartDashboard.putNumber("intake kP", kP);
-        SmartDashboard.putNumber("intake kD", kD);
-        SmartDashboard.putNumber("intake kD", kD);
+        // SmartDashboard.putNumber("intake kP", kP);
+        // SmartDashboard.putNumber("intake kD", kD);
+        // SmartDashboard.putNumber("intake kD", kD);
 
         maxVel = 3; // rpm
         maxAcc = 2;
@@ -164,32 +154,31 @@ public class Intake extends SubsystemBase {
             level = -1;
         }
         power = SmartDashboard.getNumber("power ", power);
-
-        // double outtake = 0;
+        boolean auton = frc.robot.Robot.isAuton();
         if (auton) {
-            return;
+            level = 0;
         }
-        if (level >= 0) {
-            auton = false;
-        }
+        // double outtake = 0;
         if (level == 0) {
             angle = -15;
         } else if (level == 1) {
-            angle = -75;
+            angle = -80;
         }
-        double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
-        double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.33 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.52 : 0;
-        if (RobotContainer.oi.driver.getStartButton()) {
-            intake = 0.32; //mid power
-            //intake = 1;  //full power
-        } else if (RobotContainer.oi.driver.getRightBumper()) {
-            intake = 0.1;
-        } 
-        if (Math.abs(intake) >= 0.1) {
-            runIntakeOut(intake);
-        } else {
-           runIntakeIn(0.05);
-        //    runIntakeIn(0);
+        if (!auton) {
+            double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
+            double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.33 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.52 : 0;
+            if (RobotContainer.oi.driver.getStartButton()) {
+                intake = 0.32; //mid power
+                //intake = 1;  //full power
+            } else if (RobotContainer.oi.driver.getRightBumper()) {
+                intake = 0.1;
+            } 
+            if (Math.abs(intake) >= 0.1) {
+                runIntakeOut(intake);
+            } else {
+               runIntakeIn(0.05);
+            //    runIntakeIn(0);
+            }
         }
 
         

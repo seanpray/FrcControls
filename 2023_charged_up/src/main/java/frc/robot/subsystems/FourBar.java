@@ -84,10 +84,10 @@ public class FourBar extends SubsystemBase {
         } else if ((RobotContainer.oi.driver.getPOV() == 90 || RobotContainer.oi.operator.getPOV() == 90) && targetExtend < 74) {
             targetExtend += 1;
         }
-        SmartDashboard.putNumber("pov", RobotContainer.oi.driver.getPOV());
-        SmartDashboard.putNumber("neoamp", fourbarNeo.getOutputCurrent());
-        SmartDashboard.putNumber("neoencoder", fourbarEncoder.getPosition());
-        SmartDashboard.putNumber("target",targetExtend);
+        // SmartDashboard.putNumber("pov", RobotContainer.oi.driver.getPOV());
+        // SmartDashboard.putNumber("neoamp", fourbarNeo.getOutputCurrent());
+        // SmartDashboard.putNumber("neoencoder", fourbarEncoder.getPosition());
+        // SmartDashboard.putNumber("target",targetExtend);
         if (fourbarNeo.getOutputCurrent() < 4) {
             fourbarPID.setReference(targetExtend, CANSparkMax.ControlType.kPosition);
             fourbarNeo.setIdleMode(IdleMode.kBrake);

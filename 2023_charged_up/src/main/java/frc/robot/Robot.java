@@ -38,9 +38,13 @@ public class Robot extends TimedRobot {
   private static final String kPreloadBackup = "preload backup";
   private static final String kChargeDock = "charge dock";
   private String m_autoSelected;
-  public boolean auton = false;
+  public static boolean auton = false;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   private final Timer m_timer = new Timer();
+
+  public static boolean isAuton() {
+    return auton;
+  }
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -54,7 +58,8 @@ public class Robot extends TimedRobot {
               // Get the UsbCamera from CameraServer
               UsbCamera camera = CameraServer.startAutomaticCapture();
               // Set the resolution
-              camera.setResolution(640, 480);
+              camera.setResolution(320, 240);
+              camera.setFPS(3);
 
               // Get a CvSink. This will capture Mats from the camera
               CvSink cvSink = CameraServer.getVideo();
@@ -119,19 +124,18 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    RobotContainer.drivetrain.auton(true);
     RobotContainer.drivetrain.resetGyro();
     auton = true;
-    m_timer.start();
+    drive = false;
+    m_timer.restart();
     // RobotContainer.elevator.resetEncoder();
     // RobotContainer.intake.resetEncoder();
     // RobotContainer.fourbar.resetEncoder();
     m_autoSelected = m_chooser.getSelected();
     System.out.println(m_autoSelected);
     // SmartDashboard.putData(m_chooser);
-    RobotContainer.intake.auton(true);
     RobotContainer.drivetrain.resetEncoders();
-    RobotContainer.elevator.pullUp(5);
+    // RobotContainer.elevator.pullUp(5);
     System.out.println("Auto selected: " + m_autoSelected);
     // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -222,8 +226,6 @@ public class Robot extends TimedRobot {
         }
     }
     if (auton) {
-      RobotContainer.intake.auton(false);
-      RobotContainer.drivetrain.auton(false);
       auton = false;
     }
     // System.out.println(auton);
