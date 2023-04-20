@@ -45,6 +45,7 @@ public class Elevator extends SubsystemBase {
     }
 
     public Elevator() {
+        SmartDashboard.putNumber("elevator level", elevator_level);
         spoolEncoder = spoolNeo.getEncoder();
         spoolEncoder.setPosition(0);
         spoolNeo.restoreFactoryDefaults();
@@ -105,8 +106,11 @@ public class Elevator extends SubsystemBase {
 
     boolean changeElevatorTarget = false;
 
+    public double elevator_level = 28;
     @Override
     public void periodic() {
+        elevator_level = SmartDashboard.getNumber("elevator level", elevator_level);
+        SmartDashboard.putNumber("elevator level", elevator_level);
         if (changeElevatorTarget) {
             RobotContainer.intake.set_angle(40);
         }
@@ -115,7 +119,7 @@ public class Elevator extends SubsystemBase {
                 elevatorTarget = -8;
                 break;
             case 1:
-                elevatorTarget = -26;
+                elevatorTarget = -elevator_level;
                 break;
         }
         if (elevatorSwitchBottom.get() && elevatorSwitchTop.get()) {
@@ -123,10 +127,6 @@ public class Elevator extends SubsystemBase {
             // spoolEncoder.setPosition(0);
         }
         changeElevatorTarget = false;
-        // SmartDashboard.putBoolean("eswitcht", elevatorSwitchTop.get());
-        //  SmartDashboard.putBoolean("eswitchB", elevatorSwitchBottom.get());
-        //  SmartDashboard.putNumber("eencoder",spoolEncoder.getPosition());
-        //  SmartDashboard.putNumber("elec", spoolNeo.getOutputCurrent());
         if (RobotContainer.oi.driver.getPOV() == 0 || RobotContainer.oi.operator.getPOV() == 0) {
             elevatorLevel = 0;
             if (!(elevatorSwitchBottom.get() && elevatorSwitchTop.get()) && spoolNeo.getOutputCurrent() < 85) {

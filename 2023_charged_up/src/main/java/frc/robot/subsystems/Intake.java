@@ -23,8 +23,8 @@ public class Intake extends SubsystemBase {
     CANSparkMax rotateNeo = new CANSparkMax(Constants.intake_rotate, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
     private RelativeEncoder rotateEncoder = rotateNeo.getEncoder();
     CANSparkMax intakeNeo = new CANSparkMax(Constants.intake_intake, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-    double level = -1;
-    private SparkMaxPIDController rotatePID = rotateNeo.getPIDController();
+    public double level = -1;
+    public SparkMaxPIDController rotatePID = rotateNeo.getPIDController();
 
     public double power = 0.5;
 
@@ -35,7 +35,7 @@ public class Intake extends SubsystemBase {
     // boolean compressor_status = false;
     // true is down
     double initial_position = 0;
-    double angle = -15;
+    public double angle = -15;
     public double previousEncoder = 0;
     public double stallEpsilon = 3;
 
@@ -138,54 +138,17 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        SmartDashboard.putBoolean("switch", intakeSwitch.get());
-        if (RobotContainer.oi.driver.getAButton() || RobotContainer.oi.operator.getAButton()) {
-            angle -= 0.3;
-            // if (intakeSwitch.get()) {
-            //     rotateEncoder.setPosition(-80);
-            //     level = 0;
-            // } else {
-            //     angle -= 0.5;
-            //     level = -1;
-            // }   
-        }
-        if (RobotContainer.oi.driver.getBackButton() || RobotContainer.oi.operator.getBackButton()) {
-            angle += 0.5;
-            level = -1;
-        }
-        power = SmartDashboard.getNumber("power ", power);
-        boolean auton = frc.robot.Robot.isAuton();
-        if (auton) {
-            level = 0;
-        }
-        // double outtake = 0;
+        rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
         if (level == 0) {
             angle = -15;
         } else if (level == 1) {
             angle = -80;
         }
-        if (!auton) {
-            double outtake = RobotContainer.oi.driver.getLeftTriggerAxis();
-            double intake = outtake > 0.1 ? outtake < 0.1 ? -0.1 : -outtake * 0.33 : RobotContainer.oi.driver.getRightTriggerAxis() > 0.1 ? 0.52 : 0;
-            if (RobotContainer.oi.driver.getStartButton()) {
-                intake = 0.32; //mid power
-                //intake = 1;  //full power
-            } else if (RobotContainer.oi.driver.getRightBumper()) {
-                intake = 0.1;
-            } 
-            if (Math.abs(intake) >= 0.1) {
-                runIntakeOut(intake);
-            } else {
-               runIntakeIn(0.05);
-            //    runIntakeIn(0);
-            }
-        }
+        SmartDashboard.putNumber("intake rotation", getIntakePos());
+    }
 
-        
-        // System.out.println(auton);
-        // System.out.println();
-        SmartDashboard.putNumber("rotate", rotateEncoder.getPosition());
-        rotatePID.setReference(angle, CANSparkMax.ControlType.kPosition);
+    public double getIntakePos(){
+        return rotateEncoder.getPosition();
     }
 
     public void toggle() {

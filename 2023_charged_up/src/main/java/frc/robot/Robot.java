@@ -36,6 +36,7 @@ public class Robot extends TimedRobot {
   private static final String kDefaultAuto = "blank";
   private static final String kPreload = "preload only";
   private static final String kPreloadBackup = "preload backup";
+  private static final String kPreloadBackupBump = "preload backup bump";
   private static final String kChargeDock = "charge dock";
   private String m_autoSelected;
   public static boolean auton = false;
@@ -90,6 +91,7 @@ public class Robot extends TimedRobot {
 
     m_chooser.setDefaultOption("Blank Auto", kDefaultAuto);
     m_chooser.addOption("Preload Backup", kPreloadBackup);
+    m_chooser.addOption("Preload Backup Bump", kPreloadBackupBump);
     m_chooser.addOption("Preload charge dock", kChargeDock);
     m_chooser.addOption("Preload only", kPreload);
     SmartDashboard.putData("Auto choices", m_chooser);
@@ -124,112 +126,25 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    RobotContainer.drivetrain.setBrake(true);
     RobotContainer.drivetrain.resetGyro();
-    auton = true;
-    drive = false;
-    m_timer.restart();
-    // RobotContainer.elevator.resetEncoder();
-    // RobotContainer.intake.resetEncoder();
-    // RobotContainer.fourbar.resetEncoder();
     m_autoSelected = m_chooser.getSelected();
     System.out.println(m_autoSelected);
-    // SmartDashboard.putData(m_chooser);
     RobotContainer.drivetrain.resetEncoders();
-    // RobotContainer.elevator.pullUp(5);
     System.out.println("Auto selected: " + m_autoSelected);
-    // m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    m_autonomousCommand = m_robotContainer.getAutonomousCommand(m_autoSelected);
 
-    // // schedule the autonomous command (example)
-    // if (m_autonomousCommand != null) {
-    //   m_autonomousCommand.schedule();
-    // }
+     // schedule the autonomous command (example)
+      if (m_autonomousCommand != null) {
+        m_autonomousCommand.schedule();
+      }
   }
-  // false if done
-  public boolean preloadScore() {
-    if (m_timer.get() < 2.0) {
-      RobotContainer.intake.set_angle(15);
-      return true;
-    }
-    if (m_timer.get() < 2.7) {
-      RobotContainer.intake.runIntakeIn(0.1);
-      return true;
-    }
-    if (m_timer.get() < 4.0) {
-      RobotContainer.intake.runIntakeOut(0.52);
-      return true;
-    }
-    return false;
-  }
-// true when done
-  boolean drive = false;
-  // boolean drive_forward = false;
-  // boolean turnaround = false;
-  public boolean driveAuton(double power, double distance) {
-    if (Math.abs(RobotContainer.drivetrain.encoderDistance()) < distance && !drive) {
-      RobotContainer.drivetrain.holoDrive(power, 0);
-      return false;
-    }
-    if (!drive) {
-      RobotContainer.drivetrain.holoDrive(0, 0);
-    }
-    drive = true;
-    // System.out.println(RobotContainer.drivetrain.getAngle());
-    // if (!turnaround && Math.abs(Math.abs(RobotContainer.drivetrain.getAngle()) % 360 - 180) > 3) {
-    //   boolean negative = RobotContainer.drivetrain.getAngle() < 0;
-    //   double turnPower = (negative ? -1.2 : 1.2) * Math.abs(Math.abs(RobotContainer.drivetrain.getAngle()) % 360 - 180) / 180;
-    //   if (turnPower > 0.5) {
-    //     turnPower = 0.5;
-    //   } else if (turnPower < -0.5) {
-    //     turnPower = -0.5;
-    //   }
-    //   RobotContainer.drivetrain.holoDrive(0, turnPower * 0.6);
-    //   return false;
-    // }
-    // if (!turnaround) {
-    //   RobotContainer.drivetrain.holoDrive(0, 0);
-    // }
-    // turnaround = true;
-    RobotContainer.drivetrain.setBrake(true);
-    RobotContainer.drivetrain.setBrake(false);
-    return true;
-  }
+
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    RobotContainer.fourbar.run();
-    switch (m_autoSelected) {
-      case kPreloadBackup:
-        if (preloadScore()) {
-          return;
-        }
-        if (driveAuton(0.2, 120)) {
-          break;
-        }
-        return;
-      case kChargeDock:
-        if (preloadScore()) {
-          return;
-        }
-        if (driveAuton(0.2, 72)) {
-          break;
-        }
-        // Put custom auto code here
-        return;
-        //blank
-      case kDefaultAuto:
-        break;
-        // preload only
-      default:
-        if (preloadScore()) {
-          return;
-        }
-    }
-    if (auton) {
-      auton = false;
-    }
-    // System.out.println(auton);
-
+    
   }
 
   @Override
@@ -241,6 +156,8 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+
+    RobotContainer.drivetrain.setBrake(false);
   }
 
   /** This function is called periodically during operator control. */

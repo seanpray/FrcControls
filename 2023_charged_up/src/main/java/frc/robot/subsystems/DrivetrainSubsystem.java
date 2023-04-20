@@ -27,15 +27,15 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
    */
   
   public void initDefaultCommand() {}
-  private double gyroOffset = 0;
+  public double gyroOffset = 0;
 
   /*
   Initialize drivebase motors from constants
   // */
   public static CANSparkMax frontLeft = new CANSparkMax(Constants.l1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   public static CANSparkMax backLeft = new CANSparkMax(Constants.l2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  public static CANSparkMax backRight = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
-  public static CANSparkMax frontRight = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public CANSparkMax backRight = new CANSparkMax(Constants.r2, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
+  public CANSparkMax frontRight = new CANSparkMax(Constants.r1, com.revrobotics.CANSparkMaxLowLevel.MotorType.kBrushless);
   // Encoder frontLeftEncoder = new Encoder(0, 1, true, CounterBase.EncodingType.k4X);
   // Encoder frontRightEncoder = new Encoder(2, 3, true, CounterBase.EncodingType.k4X);
   // Encoder backRightEncoder = new Encoder(4, 5, true, CounterBase.EncodingType.k4X);
@@ -103,6 +103,10 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     frontRight.getEncoder().setPositionConversionFactor(encoderConstant);
     backRight.getEncoder().setPositionConversionFactor(encoderConstant);
     backLeft.getEncoder().setPositionConversionFactor(encoderConstant);
+    frontLeft.setIdleMode(IdleMode.kCoast);
+    frontRight.setIdleMode(IdleMode.kCoast);
+    backRight.setIdleMode(IdleMode.kCoast);
+    backLeft.setIdleMode(IdleMode.kCoast);
 
 
     // Sets the distance per pulse for the encoders to translate from encoder ticks to meters
@@ -131,10 +135,8 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
     }
   }
 
-  boolean brake = false;
-
-  public void motorMode() {
-    if (brake) {
+  public void setBrake(boolean state) {
+    if (state) {
       frontLeft.setIdleMode(IdleMode.kBrake);
       frontRight.setIdleMode(IdleMode.kBrake);
       backRight.setIdleMode(IdleMode.kBrake);
@@ -145,10 +147,6 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
       backRight.setIdleMode(IdleMode.kCoast);
       backLeft.setIdleMode(IdleMode.kCoast);
     }
-  }
-
-  public void setBrake(boolean state) {
-    brake = state;
   }
 
   // in rad
@@ -170,63 +168,11 @@ public class DrivetrainSubsystem extends SubsystemBase {  /**
   public void periodic() {
     // poseApproximation();
     // previousTimestamp = System.currentTimeMillis();
-    if (frc.robot.Robot.isAuton()) {
-      return;
-    }
-    brake = RobotContainer.oi.driver.getRightStickButton() || RobotContainer.oi.operator.getRightStickButton();
-    frontRight.setInverted(true);
-    backRight.setInverted(true);
+    SmartDashboard.putNumber("gyro angle", getAngle());
+      
     
-    //   var wheelPositions = new MecanumDriveWheelPositions(
-    //   frontLeft.getEncoder().getPosition(), frontRight.getEncoder().getPosition(),
-    //   backLeft.getEncoder().getPosition(), backRight.getEncoder().getPosition());
 
-    // // Get the rotation of the robot from the gyro.
-    // var gyroAngle = gyro.getAngle();
-    // System.out.println(gyroAngle);
-
-    // Update the pose
-    double y = -RobotContainer.oi.driver.getLeftY(); // Remember, this is reversed!
-    double x = -RobotContainer.oi.driver.getLeftX(); // Counteract imperfect strafing
-    double rx = -RobotContainer.oi.driver.getRightX();
-    if (y < dead_zone && y > -dead_zone) {
-      y = 0;
-    }
-    if (x < dead_zone && x > -dead_zone) {
-      x = 0;
-    }
-    if (rx < dead_zone && rx > -dead_zone) {
-      rx = 0;
-    }
-    if (rx == 0) {
-      rx = -RobotContainer.oi.operator.getRightX();
-    }
-    if (rx < dead_zone && rx > -dead_zone) {
-      rx = 0;
-    }
-    rx *= 0.7;
-
-    double multiplier = 0.35;
-    if (RobotContainer.oi.driver.getLeftStickButton()) {
-      multiplier = 1;
-    } 
-    double botHeading = getHeading();
-   
-    if (RobotContainer.oi.driver.getXButton()) {
-      gyroOffset = botHeading;
-    }
-    botHeading -= gyroOffset;
-    // m_odometry.update(new Rotation2d(corrected_heading), new MecanumDriveWheelSpeeds(frontLeft.getEncoder().getVelocity(), frontRight.getEncoder().getVelocity(), backLeft.getEncoder().getVelocity(), backRight.getEncoder().getVelocity()));
-
-    double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
-    double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
-
-    double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
-    double frontLeftPower = (rotY + rotX + rx) / denominator;
-    double backLeftPower = (rotY - rotX + rx) / denominator;
-    double frontRightPower = (rotY - rotX - rx) / denominator;
-    double backRightPower = (rotY + rotX - rx) / denominator;
-    setPower(clamp(curveInput(PID.motor_1 * frontLeftPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_2 * backRightPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_3 * frontRightPower * multiplier, multiplier == 1, curve_b), -1, 1), clamp(curveInput(PID.motor_4 * backLeftPower * multiplier, multiplier == 1, curve_b), -1, 1));
+  
   }
 
   /**
